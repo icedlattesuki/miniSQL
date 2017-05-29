@@ -17,11 +17,11 @@ void Page::initialize() {
 }
 
 // 下面是一些存取控制函数，较为简单就不赘述了
-inline void Page::setFileName(string file_name) {
+inline void Page::setFileName(std::string file_name) {
     file_name_ = file_name;
 }
 
-inline string Page::getFileName() {
+inline std::string Page::getFileName() {
     return file_name_;
 }
 
@@ -82,7 +82,7 @@ BufferManager::BufferManager(int frame_size) {
 // 析构函数非常重要。在程序结束时需要将缓冲池里的所有页写回磁盘。
 BufferManager::~BufferManager() {
     for (int i = 0;i < frame_size_;i++) {
-        string file_name;
+        std::string file_name;
         int block_id;
         file_name = Frames[i].getFileName();
         block_id = Frames[i].getBlockId();
@@ -98,7 +98,12 @@ void BufferManager::initialize(int frame_size) {
 }
 
 // 下面几个函数较为简单，也不赘述了
-char* BufferManager::getPage(int page_id) {
+char* BufferManager::getPage(std::string file_name , int block_id) {
+    int page_id = getPageId(file_name , block_id);
+    if (page_id == -1) {
+        page_id = getEmptyPageId();
+        loadDiskBlock(page_id , file_name , block_id);
+    }
     Frames[page_id].setRef(true);
     return Frames[page_id].getBuffer();
 }
@@ -122,17 +127,11 @@ int BufferManager::unpinPage(int page_id) {
 }
 
 // 核心函数之一。内存和磁盘交互的接口。
-int BufferManager::loadDiskBlock(int page_id , string file_name , int block_id) {
+int BufferManager::loadDiskBlock(int page_id , std::string file_name , int block_id) {
     // 初始化一个页
     Frames[page_id].initialize();
-    // 这里是将string转换为char数组。可忽略。
-    int len = file_name.length();
-    char tmp_file_name[len + 1];
-    for (int i = 0;i < len;i++) 
-        tmp_file_name[i] = file_name[i];
-    tmp_file_name[len] = '\0';
     // 打开磁盘文件
-    FILE* f = fopen(tmp_file_name , "r");
+    FILE* f = fopen(file_name.c_str() , "r");
     // 打开失败返回-1
     if (f == NULL)
         return -1;
@@ -155,18 +154,12 @@ int BufferManager::loadDiskBlock(int page_id , string file_name , int block_id) 
 }
 
 // 核心函数之一。内存和磁盘交互的接口。
-int BufferManager::flushPage(int page_id , string file_name , int block_id) {
-    // 将string转换为char数组。可忽略。
-    int len = file_name.length();
-    char tmp_file_name[len + 1];
-    for (int i = 0;i < len;i++) 
-        tmp_file_name[i] = file_name[i];
-    tmp_file_name[len] = '\0';
+int BufferManager::flushPage(int page_id , std::string file_name , int block_id) {
     // 打开文件
-    FILE* f = fopen(tmp_file_name , "w");
+    FILE* f = fopen(file_name.c_str() , "w");
     // 其实这里有写多余，因为打开一个文件读总是能成功。
     if (f == NULL)
-        return -1;
+        return -1; 
     // 将文件指针定位到对应位置
     fseek(f , PAGESIZE * block_id , SEEK_SET);
     // 获取页的句柄
@@ -179,9 +172,9 @@ int BufferManager::flushPage(int page_id , string file_name , int block_id) {
 }
 
 // 简单遍历获取页号
-int BufferManager::getPageId(string file_name , int block_id) {
+int BufferManager::getPageId(std::string file_name , int block_id) {
     for (int i = 0;i < frame_size_;i++) {
-        string tmp_file_name = Frames[i].getFileName();
+        std::string tmp_file_name = Frames[i].getFileName();
         int tmp_block_id = Frames[i].getBlockId();
         if (tmp_file_name == file_name && tmp_block_id == block_id)
             return i;
@@ -209,7 +202,7 @@ int BufferManager::getEmptyPageId() {
         else if (Frames[current_position_].getPinCount() == 0) {
             // 如果这一页被改动过，需要将其写回磁盘，然后删除
             if (Frames[current_position_].getDirty() == true) {
-                string file_name = Frames[current_position_].getFileName();
+                std::string file_name = Frames[current_position_].getFileName();
                 int block_id = Frames[current_position_].getBlockId();
                 flushPage(current_position_ , file_name , block_id);
             }
