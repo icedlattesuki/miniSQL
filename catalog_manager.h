@@ -6,6 +6,7 @@
 #include "buffer_manager.h"
 #include "basic.h"
 #include "exception.h"
+#include "const.h"
 
 class CatalogManager{
     public: 
