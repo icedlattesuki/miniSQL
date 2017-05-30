@@ -1,3 +1,10 @@
+//
+//  record_manager.h
+//  record_manager
+//
+//  Created by Hys on 2017/5/30.
+//  Copyright © 2017年 Hys. All rights reserved.
+//
 #ifndef _RECORD_MANAGER_H_
 #define _RECORD_MANAGER_H_ 1
 
@@ -5,10 +12,13 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <sstream>
 #include "basic.h"
 #include "catalog_manager.h"
 #include "buffer_manager.h"
 #include "exception.h"
+#include "const.h"
+#include "template_function.h"
 
 class RecordManager {
     public:
@@ -26,8 +36,9 @@ class RecordManager {
         //输出：void
         //功能：向对应表中插入一条记录
         //异常：如果元组类型不匹配，抛出tuple_type_conflict异常。如果
-        //主键冲突，抛出primary_key_conflict异常。如果表不存在，抛出table_not_exist异常。
-        void insertRecord(std::string table_name , const Tuple& tuple); 
+        //主键冲突，抛出primary_key_conflict异常。如果unique属性冲突，
+        //抛出unique_conflict异常。如果表不存在，抛出table_not_exist异常。
+        void insertRecord(std::string table_name , Tuple& tuple); 
         //输入：表名
         //输出：void
         //功能：删除对应表中所有记录（不删除表文件）
@@ -43,13 +54,26 @@ class RecordManager {
         //输出：Table类型对象
         //功能：返回整张表
         //异常：如果表不存在，抛出table_not_exist异常
-        Table selectRecord(std::string table_name);
+        Table selectRecord(std::string table_name , std::string result_table_name = "tmp_table");
         //输入：表名，目标属性，一个Where类型的对象
         //输出：Table类型对象
         //功能：返回包含所有目标属性满足Where条件的记录的表
         //异常：如果表不存在，抛出table_not_exist异常。如果属性不存在，抛出attribute_not_exist异常。
         //如果Where条件中的两个数据类型不匹配，抛出data_type_conflict异常。
-        Table selectRecord(std::string table_name , std::string target_attr , Where where);
+        Table selectRecord(std::string table_name , std::string target_attr , Where where , std::string result_table_name = "tmp_table");
+    private:
+        //获取文件大小
+        int getFileSize(std::string table_name);
+        //insertRecord的辅助函数
+        void insertRecord1(char* p , int offset , int len , const std::vector<Data>& v);
+        //deleteRecord的辅助函数
+        char* deleteRecord1(char* p);
+        //从内存中读取一个tuple
+        Tuple readTuple(const char* p , Attribute attr);
+        //获取一个tuple的长度
+        int getTupleLength(char* p);
+        //判断插入的记录是否和其他记录冲突
+        bool isConflict(std::vector<Tuple>& tuples , std::vector<Data>& v , int index);
 };
 
 #endif
