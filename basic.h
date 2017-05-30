@@ -27,12 +27,9 @@ typedef enum{
 //type的类型：-1：int,0:float,1-255:string(数值为字符串的长度+1),注意使用时对Value的选择！
 struct Data{
     int type;
-    union Value
-    {
-        int datai;
-        float dataf;
-        std::string* datas;
-    } values;
+    int datai;
+    float dataf;
+    std::string datas;
 };
 
 //Where存放一组判断语句
@@ -46,7 +43,8 @@ struct Attribute{
     int num;  //存放table的属性数
     std::string name[32];  //存放每个属性的名字
     short type[32];  //存放每个属性的类型，-1：int,0:float,1~255:string的长度+1
-    bool primary[32];  //判断每个属性是否是主键，是为true
+    bool unique[32];  //判断每个属性是否unique，是为true
+    short primary_key;  //判断是否存在主键,-1为不存在，其他则为主键的所在位置
 };
 
 //索引管理，一张表最多只能有10个index
@@ -60,12 +58,15 @@ struct Index{
 class Tuple{
 private:
     std::vector<Data> data_;  //存储元组里的每个数据的信息
+    bool isDeleted_ = false;
 public:
     Tuple(){};
     Tuple(const Tuple &tuple_in);  //拷贝元组
     void addData(Data data_in);  //新增元组
     std::vector<Data> getData();  //返回数据
     int getSize();  //返回元组的数据数量
+    bool isDeleted();  
+    void setDeleted();
     void showTuple();  //显示元组中的所有数据
 };
 
@@ -75,7 +76,6 @@ private:
     Attribute attr_;  //数据的类型
     std::vector<Tuple> tuple_;  //存放所有的元组
     Index index_;  //表的索引信息
-    short has_key_;  //判断是否存在主键,-1为不存在，其他则为主键的所在位置
 public:
     //构造函数
     Table(std::string title,Attribute attr);

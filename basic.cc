@@ -7,7 +7,7 @@
 //
 
 #include "basic.h"
-
+Data
 Tuple::Tuple(const Tuple &tuple_in){
     for(int index=0;index<tuple_in.data_.size();index++)
     {
@@ -29,14 +29,22 @@ std::vector<Data> Tuple::getData(){
     return this->data_;
 }
 
+bool Tuple::isDeleted() {
+    return isDeleted_;
+}
+
+void Tuple::setDeleted() {
+    isDeleted_ = true;
+}
+
 void Tuple::showTuple(){
     for(int index=0;index<getSize();index++){
         if(data_[index].type==-1)
-            std::cout<<data_[index].values.datai<<'\t';
+            std::cout<<data_[index].datai<<'\t';
         else if(data_[index].type==0)
-            std::cout<<data_[index].values.dataf<<'\t';
+            std::cout<<data_[index].dataf<<'\t';
         else
-            std::cout<<*data_[index].values.datas<<'\t';
+            std::cout<<data_[index].datas<<'\t';
     }
     std::cout<<std::endl;
 }
