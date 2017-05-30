@@ -1,3 +1,10 @@
+//
+//  buffer_manager.cc
+//  buffer_manager
+//
+//  Created by Hys on 2017/5/21.
+//  Copyright © 2017年 Hys. All rights reserved.
+//
 #include "buffer_manager.h"
 
 // Page类的实现

@@ -1,14 +1,18 @@
+//
+//  buffer_manager.h
+//  buffer_manager
+//
+//  Created by Hys on 2017/5/21.
+//  Copyright © 2017年 Hys. All rights reserved.
+//
 #ifndef _BUFFER_MANAGER_H_
 #define _BUFFER_MANAGER_H_ 1
 
-// 每一页的大小为4KB
-#define PAGESIZE 4096
-// 最大页数为100
-#define MAXFRAMESIZE 100
 #include <cstdio>
 #include <iostream>
 #include <vector>
 #include <string>
+#include "const.h"
 
 // Page类。磁盘文件中的每一块对应内存中的一个页（page)
 class Page {
