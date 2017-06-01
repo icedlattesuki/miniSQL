@@ -163,7 +163,7 @@ int BufferManager::loadDiskBlock(int page_id , std::string file_name , int block
 // 核心函数之一。内存和磁盘交互的接口。
 int BufferManager::flushPage(int page_id , std::string file_name , int block_id) {
     // 打开文件
-    FILE* f = fopen(file_name.c_str() , "w");
+    FILE* f = fopen(file_name.c_str() , "r+");
     // 其实这里有写多余，因为打开一个文件读总是能成功。
     if (f == NULL)
         return -1; 
