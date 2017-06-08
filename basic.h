@@ -78,6 +78,7 @@ private:
     Index index_;  //表的索引信息
 public:
     //构造函数
+    Table(){};
     Table(std::string title,Attribute attr);
     Table(const Table &table_in);
     
@@ -94,6 +95,7 @@ public:
     short gethasKey();
     
     void showTable(); //显示table的部分数据
+    void showTable(int limit);
 };
 
 

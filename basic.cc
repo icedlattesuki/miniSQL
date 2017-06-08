@@ -7,7 +7,7 @@
 //
 
 #include "basic.h"
-Data
+
 Tuple::Tuple(const Tuple &tuple_in){
     for(int index=0;index<tuple_in.data_.size();index++)
     {
@@ -24,17 +24,17 @@ void Tuple::addData(Data data_in){
     this->data_.push_back(data_in);
 }
 
-//得到元组中的数据
-std::vector<Data> Tuple::getData(){
-    return this->data_;
-}
-
 bool Tuple::isDeleted() {
     return isDeleted_;
 }
 
 void Tuple::setDeleted() {
     isDeleted_ = true;
+}
+
+//得到元组中的数据
+std::vector<Data> Tuple::getData(){
+    return this->data_;
 }
 
 void Tuple::showTuple(){
@@ -54,19 +54,11 @@ Table::Table(std::string title,Attribute attr){
     this->title_=title;
     this->attr_=attr;
     this->index_.num=0;
-    this->has_key_ = 0;
-    for (int i = 0;i < attr.num;i++) {
-        if (attr.primary[i] == true) {
-            this->has_key_ = 1;
-            break;
-        }
-    }
 }
 
 //table的构造函数，拷贝用
 Table::Table(const Table &table_in){
     this->attr_=table_in.attr_;
-    this->has_key_=table_in.has_key_;
     this->index_=table_in.index_;
     this->title_=table_in.title_;
     for(int index=0;index<tuple_.size();index++)
@@ -166,14 +158,20 @@ std::vector<Tuple>& Table::getTuple(){
 Index Table::getIndex(){
     return index_;
 }
-short Table::gethasKey(){
-    return has_key_;
-}
+
 
 void Table::showTable(){
     for(int index=0;index<attr_.num;index++)
         std::cout<<attr_.name[index]<<'\t';
     std::cout<<std::endl;
     for(int index=0;index<tuple_.size();index++)
+        tuple_[index].showTuple();
+}
+
+void Table::showTable(int limit) {
+    for(int index=0;index<attr_.num;index++)
+        std::cout<<attr_.name[index]<<'\t';
+    std::cout<<std::endl;
+    for(int index=0;index<limit&&index<tuple_.size();index++)
         tuple_[index].showTuple();
 }
