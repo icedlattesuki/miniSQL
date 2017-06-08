@@ -337,19 +337,11 @@ Table RecordManager::selectRecord(std::string table_name , std::string target_at
                         v.push_back(tuple);
                     }
                     //不满足条件，跳过该记录
-                    else {
-                        int len = getTupleLength(p);
-                        p = p + len;
-                    }
                 };break;
                 //同case1
                 case 0:{
                     if (isSatisfied(d[index].dataf , where.data.dataf , where.relation_character) == true) {
                         v.push_back(tuple);
-                    }
-                    else {
-                        int len = getTupleLength(p);
-                        p = p + len;
                     }
                 };break;
                 //同case1
@@ -357,12 +349,10 @@ Table RecordManager::selectRecord(std::string table_name , std::string target_at
                     if (isSatisfied(d[index].datas , where.data.datas , where.relation_character) == true) {
                         v.push_back(tuple);
                     }
-                    else {
-                        int len = getTupleLength(p);
-                        p = p + len;
-                    }
                 };
             }
+            int len = getTupleLength(p);
+            p = p + len;
         }
     }
     return table;
@@ -424,7 +414,7 @@ Tuple RecordManager::readTuple(const char* p , Attribute attr) {
     for (int i = 0;i < attr.num;i++) {
         Data data;
         data.type = attr.type[i];
-        char* tmp;
+        char tmp[100];
         int j;
         for (j = 0;*p != ' ';j++,p++) {
             tmp[j] = *p;
@@ -447,12 +437,14 @@ Tuple RecordManager::readTuple(const char* p , Attribute attr) {
         }
         tuple.addData(data);
     }
+    if (*p == '1')
+        tuple.setDeleted();
     return tuple;
 }
 
 //获取一个tuple的长度
 int RecordManager::getTupleLength(char* p) {
-    char* tmp;
+    char tmp[10];
     int i;
     for (i = 0;p[i] != ' ';i++) 
         tmp[i] = p[i];
@@ -463,7 +455,7 @@ int RecordManager::getTupleLength(char* p) {
 }
 
 //判断插入的记录是否和其他记录冲突
-bool isConflict(std::vector<Tuple>& tuples , std::vector<Data>& v , int index) {
+bool RecordManager::isConflict(std::vector<Tuple>& tuples , std::vector<Data>& v , int index) {
     for (int i = 0;i < tuples.size();i++) {
         if (tuples[i].isDeleted() == true)
             continue;
