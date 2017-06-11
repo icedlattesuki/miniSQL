@@ -45,6 +45,7 @@ struct Attribute{
     short type[32];  //存放每个属性的类型，-1：int,0:float,1~255:string的长度+1
     bool unique[32];  //判断每个属性是否unique，是为true
     short primary_key;  //判断是否存在主键,-1为不存在，其他则为主键的所在位置
+    bool has_index[32]; //判断是否存在索引
 };
 
 //索引管理，一张表最多只能有10个index
