@@ -92,8 +92,10 @@ void RecordManager::insertRecord(std::string table_name , Tuple& tuple) {
         }
     }
     len += v.size() + 7;
+    int block_offset;//最终记录所插入的块的编号
     //如果剩余的空间足够插入该tuple
     if (PAGESIZE - i >= len) {
+        block_offset = block_num - 1;
         //插入该元组
         insertRecord1(p , i , len , v);
         //写回表文件
@@ -102,6 +104,7 @@ void RecordManager::insertRecord(std::string table_name , Tuple& tuple) {
     }
     //如果剩余的空间不够
     else {
+        block_offset = block_num;
         //新增一个块
         char* p = buffer_manager.getPage(table_name , block_num);
         //在新增的块中插入该元组
@@ -109,6 +112,17 @@ void RecordManager::insertRecord(std::string table_name , Tuple& tuple) {
         //写回表文件
         int page_id = buffer_manager.getPageId(table_name , block_num);
         buffer_manager.flushPage(page_id , table_name , block_num);
+    }
+
+    //更新索引
+    IndexManager index_manager;
+    for (int i = 0;i < attr.num;i++) {
+        if (attr.has_index[i] == true) {
+            std::string attr_name = attr.name[i];
+            std::string file_path = "INDEX_FILE_" + attr_name + "_" + table_name;
+            std::vector<Data> d = tuple.getData();
+            index_manager.insertIndex(file_path , d[i] , block_offset);
+        }
     }
 }
 
@@ -129,6 +143,8 @@ void RecordManager::deleteRecord(std::string table_name) {
         return;
     //初始化BufferManager
     BufferManager buffer_manager;
+    Attribute attr = catalog_manager.getAttribute(table_name);
+    IndexManager index_manager;
     //遍历所有块
     for (int i = 0;i < block_num;i++) {
         //获取当前块的句柄
@@ -136,6 +152,17 @@ void RecordManager::deleteRecord(std::string table_name) {
         char* t = p;
         //将块中的每一个元组记录设置为已删除
         while(*p != '\0' && p < t + PAGESIZE) {
+            //更新索引
+            Tuple tuple = readTuple(p , attr);
+            for (int j = 0;j < attr.num;j++) {
+                if (attr.has_index[j] == true) {
+                    std::string attr_name = attr.name[i];
+                    std::string file_path = "INDEX_FILE_" + attr_name + "_" + table_name;
+                    std::vector<Data> d = tuple.getData();
+                    index_manager.deleteIndexByKey(file_path , d[j]);
+                }
+            }
+            //删除记录
             p = deleteRecord1(p);
         }
         //将块写回表文件

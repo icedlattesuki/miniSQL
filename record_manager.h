@@ -14,6 +14,7 @@
 #include <vector>
 #include <sstream>
 #include "basic.h"
+#include "index_manager.h"
 #include "catalog_manager.h"
 #include "buffer_manager.h"
 #include "exception.h"
