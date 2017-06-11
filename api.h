@@ -29,7 +29,7 @@ public:
 	//如果表不存在，抛出table_not_exist异常
 	//如果属性不存在，抛出attribute_not_exist异常
 	//如果Where条件中的两个数据类型不匹配，抛出data_type_conflict异常
-	Table selectRecord(std::string table_name , std::vector<std::string> target_attr , std::vector<Where> where);
+	Table selectRecord(std::string table_name, std::vector<std::string> target_attr, std::vector<Where> where, char operation);
 	//输入：表名、Where条件属性名、Where条件值域
 	//输出：void
 	//功能：删除对应条件下的Table内记录(不删除表文件)
@@ -37,7 +37,7 @@ public:
 	//如果表不存在，抛出table_not_exist异常
 	//如果属性不存在，抛出attribute_not_exist异常
 	//如果Where条件中的两个数据类型不匹配，抛出data_type_conflict异常
-	void deleteRecord(std::string table_name , std::string target_attr , Where where);
+	void deleteRecord(std::string table_name, std::string target_attr , Where where);
 	//输入：表名、一个元组对象
 	//输出：void
 	//功能：向对应表内插入一条记录
@@ -46,13 +46,13 @@ public:
 	//如果主键冲突，抛出primary_key_conflict异常
 	//如果unique属性冲突，抛出unique_conflict异常
 	//如果表不存在，抛出table_not_exist异常
-	void insertRecord(std::string table_name , Tuple& tuple);
-	//输入：Table类型对象
+	void insertRecord(std::string table_name, Tuple& tuple);
+	//输入：表名，属性，主键，索引
     //输出：是否创建成功
     //功能：在数据库中插入一个表的元信息
     //异常：由底层处理
 	//如果已经有相同表名的表存在，则抛出table_exist异常
-	bool createTable(Table& in_table);
+	bool createTable(std::string table_name, Attribute attribute, int primary, Index index);
 	//输入：表名
     //输出：是否删除成功
     //功能：在数据库中删除一个表的元信息，及表内所有记录(删除表文件)
@@ -76,8 +76,12 @@ public:
     //如果对应属性没有索引，抛出index_not_exist异常
 	bool dropIndex(std::string table_name, std::string index_name);
 private:
+	//私有函数，用于多条件查询时的and条件合并
+	Table unionTable(Table &table1, Table &table2, std::string target_attr, Where where);
+	//私有函数，用于多条件查询时的or条件合并
+	Table joinTable(Table &table1, Table &table2, std::string target_attr, where);
 	RecordManager record;
 	CataManager catalog;
-};
+}
 
 #endif
