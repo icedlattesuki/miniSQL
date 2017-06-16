@@ -19,7 +19,7 @@
 #include "const.h"
 
 #ifndef TABLE_MANAGER_PATH
-#define TABLE_MANAGER_PATH "catalog_file"
+#define TABLE_MANAGER_PATH "./database/catalog/catalog_file"
 #endif
 
 class CatalogManager{
@@ -55,6 +55,11 @@ public:
     //异常：如果表不存在，抛出table_not_exist异常。如果对应属性不存在，抛出attribute_not_exist异常。
     //如果对应属性已经有了索引，抛出index_exist异常。
     void createIndex(std::string table_name,std::string attr_name,std::string index_name);
+    //输入：表名，索引名
+    //输出：索引所对应的属性名
+    //功能：通过索引名定位属性名
+    //异常：如果表不存在，抛出table_not_exist异常。如果对应索引不存在，抛出index_not_exist异常。
+    std::string IndextoAttr(std::string table_name,std::string index_name);
     //输入：表名，索引名
     //输出：void
     //功能：删除对应表的对应属性上的索引
