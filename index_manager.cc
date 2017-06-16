@@ -7,14 +7,43 @@
 //
 
 #include "index_manager.h"
+#include "const.h"
+#include "basic.h"
+#include "buffer_manager.h"
+#include "bplustree.h"
 #include <string>
 #include <vector>
 #include <map>
+
+IndexManager::IndexManager(){}
+
+IndexManager::~IndexManager()
+{
+    for (intMap::iterator itInt = indexIntMap.begin(); itInt != indexIntMap.end(); itInt++) {
+        if (itInt->second) {
+            itInt->second->writtenbackToDiskAll();
+            delete itInt->second;
+        }
+    }
+    for (stringMap::iterator itString = indexStringMap.begin(); itString != indexStringMap.end(); itString++) {
+        if (itString->second) {
+            itString->second->writtenbackToDiskAll();
+            delete itString->second;
+        }
+    }
+    for (floatMap::iterator itFloat = indexFloatMap.begin(); itFloat != indexFloatMap.end(); itFloat++) {
+        if(itFloat->second) {
+            itFloat->second->writtenbackToDiskAll();
+            delete itFloat->second;
+        }
+    }
+}
 
 void IndexManager::createIndex(std::string file_path, int type)
 {
     int key_size = getKeySize(type); //获取key的size
     int degree = getDegree(type); //获取需要的degree
+
 	//根据数据类型不同，用对应的方法建立映射关系
 	//并且先初始化一颗B+树
     if (type == TYPE_INT) {
@@ -38,11 +67,10 @@ void IndexManager::dropIndex(std::string file_path, int type)
 		//查找路径对应的键值对
         intMap::iterator itInt = indexIntMap.find(file_path);
         if (itInt == indexIntMap.end()) { //未找到
-			/*
-            cout << "Error:in drop index, no index " << file_path <<" exits" << endl;
-			*/
+            // cout << "Error:in drop index, no index " << file_path <<" exits" << endl;
 			return;
-        } else { //删除对应的B+树
+        } else {
+            //删除对应的B+树
             delete itInt->second;
 			//清空该键值对
             indexIntMap.erase(itInt);
@@ -50,9 +78,7 @@ void IndexManager::dropIndex(std::string file_path, int type)
     } else if (type == TYPE_FLOAT) { //同上
         floatMap::iterator itFloat = indexFloatMap.find(file_path);
         if (itFloat == indexFloatMap.end()) {
-			/*
-            cout << "Error:in drop index, no index " << file_path <<" exits" << endl;
-			*/
+            // cout << "Error:in drop index, no index " << file_path <<" exits" << endl;
             return;
         } else {
             delete itFloat->second;
@@ -61,9 +87,7 @@ void IndexManager::dropIndex(std::string file_path, int type)
     } else {
         stringMap::iterator itString = indexStringMap.find(file_path);
         if (itString == indexStringMap.end()) { //同上
-			/*
-            cout << "Error:in drop index, no index " << file_path <<" exits" << endl;
-			*/
+            // cout << "Error:in drop index, no index " << file_path <<" exits" << endl;
             return;
         } else {
             delete itString->second;
@@ -74,113 +98,97 @@ void IndexManager::dropIndex(std::string file_path, int type)
 	return;
 }
 
-int IndexManager::findIndex(std::string file_path, std::string key, int type)
+int IndexManager::findIndex(std::string file_path, Data data)
 {
-    setKey(type, key);
+    //setKey(type, key);
 
-    if (type == TYPE_INT) {
+    if (data.type == TYPE_INT) {
         intMap::iterator itInt = indexIntMap.find(file_path);
-        if (itInt == indexIntMap.end()) {
-			/*
-            cout << "Error:in search index, no index " << file_path <<" exits" << endl;
-			*/
-            return -1;
-        }
-        else
-            return itInt->second->findKey(kt.intTmp);
-    } else if(type == TYPE_FLOAT) {
-        floatMap::iterator itFloat = indexFloatMap.find(file_path);
-        if (itFloat == indexFloatMap.end()) {
-			/*
-            cout << "Error:in search index, no index " << file_path <<" exits" << endl;
-			*/
+        if (itInt == indexIntMap.end()) { //未找到
+            // cout << "Error:in search index, no index " << file_path <<" exits" << endl;
             return -1;
         } else
-            return itFloat->second->findKey(kt.floatTmp);
+            //找到则返回对应的键值
+            return itInt->second->searchVal(data.datai);
+    } else if(data.type == TYPE_FLOAT) {
+        floatMap::iterator itFloat = indexFloatMap.find(file_path);
+        if (itFloat == indexFloatMap.end()) { //同上
+            // cout << "Error:in search index, no index " << file_path <<" exits" << endl;
+            return -1;
+        } else
+            return itFloat->second->searchVal(data.dataf);
     } else {
         stringMap::iterator itString = indexStringMap.find(file_path);
-        if (itString == indexStringMap.end()) {
-			/*
-            cout << "Error:in search index, no index " << file_path <<" exits" << endl;
-			*/
+        if (itString == indexStringMap.end()) { //同上
+            // cout << "Error:in search index, no index " << file_path <<" exits" << endl;
             return -1;
         } else
-            return itString->second->findKey(key);
+            return itString->second->searchVal(data.datas);
     }
 }
 
-void IndexManager::insertIndex(std::string file_path, std::string key, int block_id, int type)
+void IndexManager::insertIndex(std::string file_path, Data data, int block_id)
 {
-    setKey(type, key);
+    //setKey(type, key);
 
-    if (type == TYPE_INT) {
+    if (data.type == TYPE_INT) {
         intMap::iterator itInt = indexIntMap.find(file_path);
         if (itInt == indexIntMap.end()) {
-			/*
-            cout << "Error:in search index, no index " << file_path <<" exits" << endl;
-			*/
+            // cout << "Error:in search index, no index " << file_path <<" exits" << endl;
             return;
         } else
-            itInt->second->insertKey(kt.intTmp, block_id);
-    } else if (type == TYPE_FLOAT) {
+            itInt->second->insertKey(data.datai, block_id);
+    } else if (data.type == TYPE_FLOAT) {
         floatMap::iterator itFloat = indexFloatMap.find(file_path);
         if (itFloat == indexFloatMap.end()) {
-			/*
-            cout << "Error:in search index, no index " << file_path <<" exits" << endl;
-			*/
+            // cout << "Error:in search index, no index " << file_path <<" exits" << endl;
 			return;
-        } else {
-            itFloat->second->insertKey(kt.floatTmp, block_id);
+        } else
+            itFloat->second->insertKey(data.dataf, block_id);
     } else {
         stringMap::iterator itString = indexStringMap.find(file_path);
         if (itString == indexStringMap.end()) {
-			/*
-            cout << "Error:in search index, no index " << file_path <<" exits" << endl;
-			*/
+            // cout << "Error:in search index, no index " << file_path <<" exits" << endl;
             return;
         } else
-            itString->second->insertKey(key, block_id);
+            itString->second->insertKey(data.datas, block_id);
     }
+
+    return;
 }
 
-void IndexManager::deleteIndexByKey(std::string file_path, std::string key, int type)
+void IndexManager::deleteIndexByKey(std::string file_path, Data data)
 {
-    setKey(type, key);
+    //setKey(type, key);
 
-    if (type == TYPE_INT) {
+    if (data.type == TYPE_INT) {
         intMap::iterator itInt = indexIntMap.find(file_path);
         if (itInt == indexIntMap.end()) {
-			/*
-            cout << "Error:in search index, no index " << file_path <<" exits" << endl;
-			*/
+            // cout << "Error:in search index, no index " << file_path <<" exits" << endl;
             return;
         } else
-            itInt->second->deleteKey(kt.intTmp);
-    } else if (type == TYPE_FLOAT) {
+            itInt->second->deleteKey(data.datai);
+    } else if (data.type == TYPE_FLOAT) {
         floatMap::iterator itFloat = indexFloatMap.find(file_path);
         if (itFloat == indexFloatMap.end()) {
-			/*
-            cout << "Error:in search index, no index " << file_path <<" exits" << endl;
-			*/
+            // cout << "Error:in search index, no index " << file_path <<" exits" << endl;
             return;
         } else
-            itFloat->second->deleteKey(kt.floatTmp);
+            itFloat->second->deleteKey(data.dataf);
     } else {
         stringMap::iterator itString = indexStringMap.find(file_path);
         if(itString == indexStringMap.end()) {
-			/*
-            cout << "Error:in search index, no index " << file_path <<" exits" << endl;
-			*/
+            // cout << "Error:in search index, no index " << file_path <<" exits" << endl;
             return;
         }
         else
-			itString->second->deleteKey(key);
+			itString->second->deleteKey(data.datas);
     }
 }
 
 int IndexManager::getDegree(int type)
 {
-    int degree = bm.getBlockSize() / (getKeySize(type)+sizeof(int));
+    int degree = (PAGESIZE - sizeof(int)) / (getKeySize(type) + sizeof(int));
     if (degree % 2 == 0)
 		degree -= 1;
     return degree;
@@ -195,13 +203,50 @@ int IndexManager::getKeySize(int type)
     else if (type > 0)
         return type + 1;
     else {
-		/*
-        cout << "ERROR: in getKeySize: invalid type" << endl;
-		*/
+        // cout << "ERROR: in getKeySize: invalid type" << endl;
         return -100;
     }
 }
 
+void IndexManager::searchRange(std::string file_path, Data data1, Data data2, std::vector<int>& vals)
+{
+    int flag = 0;
+    //检测数据类型是否匹配
+    if (data1.type != data2.type) {
+        // cout << "ERROR: in searchRange: Wrong data type!" << endl;
+        return;
+    } else if (data1.type == -2) {
+        flag = 1;
+    } else if (data2.type == -2) {
+        flag = 2;
+    }
+
+    if (data1.type == TYPE_INT) {
+        intMap::iterator itInt = indexIntMap.find(file_path);
+        if (itInt == indexIntMap.end()) {
+            // cout << "Error:in search index, no index " << file_path <<" exits" << endl;
+            return;
+        } else
+            itInt->second->searchRange(data1.datai, data2.datai, vals, flag);
+    } else if (data1.type == TYPE_FLOAT) {
+        floatMap::iterator itFloat = indexFloatMap.find(file_path);
+        if (itFloat == indexFloatMap.end()) {
+            // cout << "Error:in search index, no index " << file_path <<" exits" << endl;
+            return;
+        } else
+            itFloat->second->searchRange(data1.dataf, data2.dataf, vals, flag);
+    } else {
+        stringMap::iterator itString = indexStringMap.find(file_path);
+        if(itString == indexStringMap.end()) {
+            // cout << "Error:in search index, no index " << file_path <<" exits" << endl;
+            return;
+        }
+        else
+            itString->second->searchRange(data1.datas, data2.datas, vals, flag);
+    }
+}
+
+/*
 void IndexManager::setKey(int type, std::tring key)
 {
     stringstream ss;
@@ -212,10 +257,11 @@ void IndexManager::setKey(int type, std::tring key)
         ss >> this->kt.floatTmp;
     else if (type > 0)
         ss >> this->kt.stringTmp;
-	/*
+
     else
         cout << "Error: in getKey: invalid type" << endl;
-	*/
+
 
 	return;
 }
+*/
