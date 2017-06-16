@@ -9,6 +9,7 @@
 #include "template_function.h"
 #include <algorithm>
 #include <vector>
+#include <iterator>
 
 //构造函数
 API::API(){}
@@ -33,9 +34,9 @@ Table API::selectRecord(std::string table_name, std::vector<std::string> target_
 		Table table2 = record.selectRecord(table_name, target_attr.at(1), where.at(1));
 
 		if (operation)
-			return joinTable(table1, table2, target_attr.at(1), where.at(1));
+			return joinTable(table1, table2);
 		else
-			return unionTable(table1, table2, target_attr.at(1), where.at(1));
+			return unionTable(table1, table2);
 	}
 }
 //输入：表名、Where条件属性名、Where条件值域
@@ -47,7 +48,7 @@ Table API::selectRecord(std::string table_name, std::vector<std::string> target_
 //如果Where条件中的两个数据类型不匹配，抛出data_type_conflict异常
 void API::deleteRecord(std::string table_name , std::string target_attr , Where where)
 {
-	if (target_attr == 0)
+	if (target_attr == "")
 		record.deleteRecord(table_name);
 	else
 		record.deleteRecord(table_name, target_attr, where);
@@ -99,9 +100,21 @@ bool API::dropTable(std::string table_name)
 //如果对应属性已经有了索引，抛出index_exist异常
 bool API::createIndex(std::string table_name, std::string index_name, std::string attr_name)
 {
-	catalog.createIndex(table_name, index_name, attr_name);
+	std::string file_path = "INDEX_FILE_" + attr_name + "_" + table_name;
+	int type;
 
-	//
+	catalog.createIndex(table_name, index_name, attr_name);
+	Attribute attr = catalog.getAttribute(table_name);
+	for (int i = 0; i < attr.num; i++) {
+		if (attr.name[i] == attr_name) {
+			type = (int)attr.type[i];
+			break;
+		}
+	}
+	index.createIndex(file_path, type);
+	record.createIndex(table_name, index_name);
+
+	return true;
 }
 //输入：表名，索引名
 //输出：是否删除成功
@@ -112,28 +125,101 @@ bool API::createIndex(std::string table_name, std::string index_name, std::strin
 //如果对应属性没有索引，抛出index_not_exist异常
 bool API::dropIndex(std::string table_name, std::string index_name)
 {
+	std::string attr_name = catalog.IndextoAttr(table_name, index_name);
+	std::string file_path = "INDEX_FILE_" + attr_name + "_" + table_name;
+	int type;
+
+	Attribute attr = catalog.getAttribute(table_name);
+	for (int i = 0; i < attr.num; i++) {
+		if (attr.name[i] == attr_name) {
+			type = (int)attr.type[i];
+			break;
+		}
+	}
+	index.dropIndex(file_path, type);
 	catalog.dropIndex(table_name, index_name);
 
-	//
+	return true;
 }
 
 //私有函数，用于多条件查询时的or条件合并
 Table API::unionTable(Table &table1, Table &table2)
 {
-	Table table_result;
+	Table result_table(table1);
+    std::vector<Tuple>& result_tuple = result_table.getTuple();
 	std::vector<Tuple> tuple1 = table1.getTuple();
 	std::vector<Tuple> tuple2 = table2.getTuple();
-	std::vector<Tuple> result_tuple = tuple1;
 
-	for (int i = 0; i < table2.size(); i++) {
-		if (isSatisfied())
-	}
+	std::vector<Tuple>().swap(result_tuple);
+	std::sort(tuple1.begin(), tuple1.end(), sortcmp);
+	std::sort(tuple2.begin(), tuple2.end(), sortcmp);
 
+	std::set_union(tuple1.begin(), tuple1.end(), tuple2.begin(), tuple2.end(), result_tuple.begin(), calcmp);
 
-
+	return result_table;
 }
+
 //私有函数，用于多条件查询时的and条件合并
 Table API::joinTable(Table &table1, Table &table2)
 {
+	Table result_table(table1);
+    std::vector<Tuple>& result_tuple = result_table.getTuple();
+	std::vector<Tuple> tuple1 = table1.getTuple();
+	std::vector<Tuple> tuple2 = table2.getTuple();
 
+	std::vector<Tuple>().swap(result_tuple);
+	std::sort(tuple1.begin(), tuple1.end(), sortcmp);
+	std::sort(tuple2.begin(), tuple2.end(), sortcmp);
+
+	std::set_intersection(tuple1.begin(), tuple1.end(), tuple2.begin(), tuple2.end(), result_tuple.begin(), calcmp);
+
+	return result_table;
+}
+
+//用于对vector的sort时排序
+bool sortcmp(const Tuple &tuple1, const Tuple &tuple2)
+{
+	std::vector<Data> data1 = tuple1.getData();
+	std::vector<Data> data2 = tuple2.getData();
+
+    switch (data1[0].type) {
+        case -1: return data1[0].datai < data2[0].datai;
+        case 0: return data1[0].dataf < data2[0].dataf;
+        default: return data1[0].datas < data2[0].datas;
+    }
+}
+
+//用于对vector对合并时排序
+bool calcmp(const Tuple &tuple1, const Tuple &tuple2)
+{
+	int i;
+
+	std::vector<Data> data1 = tuple1.getData();
+	std::vector<Data> data2 = tuple2.getData();
+
+    for (i = 0; i < data1.size(); i++) {
+        bool flag = false;
+        switch (data1[0].type) {
+            case -1: {
+                if (data1[0].datai != data2[0].datai)
+                    flag = true;
+            }break;
+            case 0: {
+                if (data1[0].dataf != data2[0].dataf)
+                    flag = true;
+            }break;
+            default: {
+                if (data1[0].datas != data2[0].datas)
+                    flag = true;
+            }break;
+        }
+		if (flag)
+			break;
+    }
+
+
+	if (i == data1.size())
+		return false;
+	else
+		return true;
 }

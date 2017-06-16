@@ -77,11 +77,19 @@ public:
 	bool dropIndex(std::string table_name, std::string index_name);
 private:
 	//私有函数，用于多条件查询时的and条件合并
-	Table unionTable(Table &table1, Table &table2, std::string target_attr, Where where);
+	Table unionTable(Table &table1, Table &table2);
 	//私有函数，用于多条件查询时的or条件合并
-	Table joinTable(Table &table1, Table &table2, std::string target_attr, where);
+	Table joinTable(Table &table1, Table &table2);
+
+private:
 	RecordManager record;
-	CataManager catalog;
-}
+	CatalogManager catalog;
+	IndexManager index;
+};
+
+//用于对vector的sort时排序
+bool sortcmp(const Tuple &tuple1, const Tuple &tuple2);
+//用于对vector对合并时对排序
+bool calcmp(const Tuple &tuple1, const Tuple &tuple2);
 
 #endif
