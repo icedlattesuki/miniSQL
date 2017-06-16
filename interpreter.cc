@@ -58,47 +58,63 @@ void Interpreter::Normalize(){
 }
 
 void Interpreter::EXEC(){
-    //根据字符串的第一个单词来对所进行的操作解析
-    if(query.substr(0,6)=="select"){
-        EXEC_SELECT();
-    }
-    //由于drop有两种情况，所以需要进行进一步的解析
-    else if(query.substr(0,4)=="drop"){
-        query=getLower(query, 5);
-        if(query.substr(5,5)=="table")
-            EXEC_DROP_TABLE();
-        else if(query.substr(5,5)=="index")
-            EXEC_DROP_INDEX();
-    }
-    else if(query.substr(0,6)=="insert"){
-        EXEC_INSERT();
-    }
-    //create也有两种情况
-    else if(query.substr(0,6)=="create"){
-        query=getLower(query, 7);
-        if(query.substr(7,5)=="table"){
-            EXEC_CREATE_TABLE();
+    try{
+        //根据字符串的第一个单词来对所进行的操作解析
+        if(query.substr(0,6)=="select"){
+            EXEC_SELECT();
         }
-        else if(query.substr(7,5)=="index"){
-            EXEC_CREATE_INDEX();
+        //由于drop有两种情况，所以需要进行进一步的解析
+        else if(query.substr(0,4)=="drop"){
+            query=getLower(query, 5);
+            if(query.substr(5,5)=="table")
+                EXEC_DROP_TABLE();
+            else if(query.substr(5,5)=="index")
+                EXEC_DROP_INDEX();
+        }
+        else if(query.substr(0,6)=="insert"){
+            EXEC_INSERT();
+        }
+        //create也有两种情况
+        else if(query.substr(0,6)=="create"){
+            query=getLower(query, 7);
+            if(query.substr(7,5)=="table"){
+                EXEC_CREATE_TABLE();
+            }
+            else if(query.substr(7,5)=="index"){
+                EXEC_CREATE_INDEX();
+            }
+        }
+        else if(query.substr(0,6)=="delete"){
+            EXEC_DELETE();
+        }
+        //调用describe有两种方式，所以使用或逻辑
+        else if(query.substr(0,8)=="describe"||query.substr(0,4)=="desc"){
+            EXEC_SHOW();
+        }
+        else if(query.substr(0,4)=="exit"&&query[5]=='\0'){
+            EXEC_EXIT();
+        }
+        else if(query.substr(0,8)=="execfile"){
+            EXEC_FILE();
+        }
+        //如果所有指令都不能对应，则抛出输入格式错误
+        else{
+            throw input_format_error();
         }
     }
-    else if(query.substr(0,6)=="delete"){
-        EXEC_DELETE();
+    
+    catch(table_exist error){
+        std::cout<<">>> Error: Table has existed!"<<std::endl;
     }
-    //调用describe有两种方式，所以使用或逻辑
-    else if(query.substr(0,8)=="describe"||query.substr(0,4)=="desc"){
-        EXEC_SHOW();
+    catch(table_not_exist error) {
+        std::cout<<">>> Error: Table not exist!"<<std::endl;
     }
-    else if(query.substr(0,4)=="exit"&&query[5]=='\0'){
-        EXEC_EXIT();
+    catch(exit_command error){
+        std::cout<<">>> Bye bye~"<<std::endl;
+        exit(0);
     }
-    else if(query.substr(0,8)=="execfile"){
-        EXEC_FILE();
-    }
-    //如果所有指令都不能对应，则抛出输入格式错误
-    else{
-        throw input_format_error();
+    catch(...){
+        std::cout<<">>> Error: Input format error!"<<std::endl;
     }
 }
 
@@ -159,7 +175,7 @@ void Interpreter::EXEC_FILE(){
 }
 
 void Interpreter::EXEC_SHOW(){
-    CataManager CM;
+    CatalogManager CM;
     std::string table_name;
     int check_index;
     //得到第一个单词的结束的位置
@@ -174,28 +190,25 @@ void Interpreter::EXEC_SHOW(){
 
 void Interpreter::EXEC_DELETE(){
     //API API;
-    CataManager CM;
+    CatalogManager CM;
     Where where_delete;
     int check_index;
     std::string table_name;
     std::string attr_name;
     std::string relation;
-    //处理删除所有信息的情况
-    if(getWord(7, check_index)=="*"){
-        if(getLower(query, 9).substr(9,4)!="from")
-        throw 1;
-        table_name=getWord(14, check_index);
-        if(query[check_index+1]!='\0')
-            throw 1;
-        //attr_name=0;
-        //API.deleteRecord(table_name, attr_name, where_delete);
-        return;
-    }
     if(getLower(query, 7).substr(7,4)!="from")
         throw 1;
     table_name=getWord(12, check_index);
     //if(!CM.hasTable(table_name))
     //    throw table_not_exist();
+    
+    //处理删除所有信息的情况
+    if(query[check_index+1]=='\0'){
+        //attr_name=0;
+        //API.deleteRecord(table_name, attr_name, where_delete);
+        return;
+    }
+    
     if(getLower(query, check_index+1).substr(check_index+1,5)!="where")
         throw 1;//格式错误
     attr_name=getWord(check_index+7, check_index);
@@ -256,7 +269,7 @@ void Interpreter::EXEC_DELETE(){
 
 void Interpreter::EXEC_INSERT(){
     //API API;
-    CataManager CM;
+    CatalogManager CM;
     std::string table_name;
     int check_index;
     Tuple tuple_insert;
@@ -322,7 +335,7 @@ void Interpreter::EXEC_INSERT(){
 //还需要table的显示
 void Interpreter::EXEC_SELECT(){
     //API API;
-    CataManager CM;
+    CatalogManager CM;
     std::string table_name;
     std::vector<std::string> attr_name;
     std::vector<std::string> target_name;
@@ -514,7 +527,7 @@ void Interpreter::EXEC_SELECT(){
 }
 
 void Interpreter::EXEC_CREATE_INDEX(){
-    CataManager CM;
+    CatalogManager CM;
     //API API;
     std::string index_name;
     std::string table_name;
@@ -607,8 +620,8 @@ void Interpreter::EXEC_CREATE_TABLE(){
         attr_num++;
         attr_create.num=attr_num;
     }
-    //调用catamanager，将表的信息插入进去
-    CataManager CM;
+    //调用CatalogManager，将表的信息插入进去
+    CatalogManager CM;
     CM.createTable(table_name, attr_create, primary, index_create);//改成API
     std::cout<<">>> SUCCESS"<<std::endl;
 }
