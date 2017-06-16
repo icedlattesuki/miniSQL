@@ -33,7 +33,7 @@ void Tuple::setDeleted() {
 }
 
 //得到元组中的数据
-std::vector<Data> Tuple::getData(){
+std::vector<Data> Tuple::getData() const{
     return this->data_;
 }
 
@@ -118,7 +118,7 @@ int Table::dropIndex(std::string index_name){
         std::cout<<"Illegal Drop Index: No such a index in the table."<<std::endl;
         return 0;
     }
-    
+
     //交换最后的索引位置和名字，来达到删除的效果
     index_.indexname[tmpIndex]=index_.indexname[index_.num-1];
     index_.location[tmpIndex]=index_.location[index_.num-1];
