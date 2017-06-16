@@ -1,4 +1,4 @@
-#include "record_manager.h"
+#include "../record_manager.h"
 using namespace std;
 
 int main() {
