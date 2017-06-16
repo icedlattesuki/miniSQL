@@ -24,7 +24,7 @@ int main() {
     record_manager.createTableFile("test1");
     catalog_manager.dropTable("test1");
     record_manager.dropTableFile("test1");
-    for (int i = 0;i < 1000;i++) {
+    for (int i = 0;i < 100;i++) {
         Tuple tuple;
         Data data1 , data2 , data3;
         data1.type = 3;
@@ -50,7 +50,7 @@ int main() {
     cout << endl;
     Where where;
     where.data.type = -1;
-    where.data.datai = 500;
+    where.data.datai = 50;
     where.relation_character = EQUAL;
     table = record_manager.selectRecord("test","age",where);
     table.showTable();
