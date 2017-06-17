@@ -7,7 +7,7 @@
 #include <cmath>
 #include <fstream>
 #include "catalog_manager.h"
-
+#include "api.h"
 #include "basic.h"
 
 class Interpreter{
@@ -52,7 +52,7 @@ public:
     //异常：格式错误则抛出input_format_error异常
     //如果表不存在，抛出table_not_exist异常
     void EXEC_CREATE_TABLE();
-    //输入：create index ID_index on T1 (ID);
+    //输入：create index ID_index on t1 (id);
     //输出：Success或者异常
     //功能：在表中插入一个名字叫ID_index的索引，其对应属性为ID
     //异常：格式错误则抛出input_format_error异常

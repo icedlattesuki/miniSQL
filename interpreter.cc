@@ -118,20 +118,30 @@ void Interpreter::EXEC(){
     }
 }
 
-void Interpreter::EXEC_DROP_TABLE(){
-    //API API;
+void Interpreter::EXEC_CREATE_INDEX(){
+    CatalogManager CM;
+    API API;
+    std::string index_name;
     std::string table_name;
+    std::string attr_name;
     int check_index;
-    //得到table的名字
-    table_name=getWord(11, check_index);
-    //如果table的名字之后有多余字符串，则是格式错误
-    if(query[check_index+1]!='\0')
-        throw 1;//输入错误
-    //API.dropTable(table_name);
+    index_name=getWord(13, check_index);
+    check_index++;
+    if(getLower(query, check_index).substr(check_index,2)!="on")
+        throw 1;//格式错误
+    table_name=getWord(check_index+3, check_index);
+    if(!CM.hasTable(table_name))
+        throw 2;//table not exist
+    if(query[check_index+1]!='(')
+        throw 1;//格式错误
+    attr_name=getWord(check_index+3, check_index);
+    if(query[check_index+1]!=')'||query[check_index+3]!='\0')
+        throw 1;//格式错误
+    API.createIndex(table_name, index_name, attr_name);
 }
 
 void Interpreter::EXEC_DROP_INDEX(){
-    //API API;
+    API API;
     std::string table_name;
     std::string index_name;
     int check_index;
@@ -146,7 +156,7 @@ void Interpreter::EXEC_DROP_INDEX(){
     //如果table的名字之后有多余字符串，则是格式错误
     if(query[check_index+1]!='\0')
         throw 1;//输入错误
-    //API.dropIndex(table_name, index_name);
+    API.dropIndex(table_name, index_name);
 }
 
 void Interpreter::EXEC_EXIT(){
@@ -189,7 +199,7 @@ void Interpreter::EXEC_SHOW(){
 }
 
 void Interpreter::EXEC_DELETE(){
-    //API API;
+    API API;
     CatalogManager CM;
     Where where_delete;
     int check_index;
@@ -199,21 +209,22 @@ void Interpreter::EXEC_DELETE(){
     if(getLower(query, 7).substr(7,4)!="from")
         throw 1;
     table_name=getWord(12, check_index);
-    //if(!CM.hasTable(table_name))
-    //    throw table_not_exist();
+    if(!CM.hasTable(table_name))
+        throw table_not_exist();
     
     //处理删除所有信息的情况
     if(query[check_index+1]=='\0'){
-        //attr_name=0;
-        //API.deleteRecord(table_name, attr_name, where_delete);
+        attr_name="";
+        API.deleteRecord(table_name, attr_name, where_delete);
+        std::cout<<">>> SUCCESS"<<std::endl;
         return;
     }
     
     if(getLower(query, check_index+1).substr(check_index+1,5)!="where")
         throw 1;//格式错误
     attr_name=getWord(check_index+7, check_index);
-    //if(!CM.hasAttribute(table_name, attr_name))
-    //    throw attribute_not_exist();
+    if(!CM.hasAttribute(table_name, attr_name))
+        throw attribute_not_exist();
     relation=getRelation(check_index+1, check_index);
     if(relation=="<")
         where_delete.relation_character=LESS;
@@ -253,7 +264,7 @@ void Interpreter::EXEC_DELETE(){
                     break;
                 default:
                     try {
-                        if((value_delete[0]!='\''&&value_delete[value_delete.length()-1]!='\'')||(value_delete[0]!='"'&&value_delete[value_delete.length()-1]!='"'))
+                        if(!(value_delete[0]!='\''&&value_delete[value_delete.length()-1]!='\'')&&!(value_delete[0]!='"'&&value_delete[value_delete.length()-1]!='"'))
                             throw 1;//格式不正确
                         where_delete.data.datas=value_delete.substr(1,value_delete.length()-2);
                     } catch (...) {
@@ -264,11 +275,12 @@ void Interpreter::EXEC_DELETE(){
             break;
         }
     }
-    //API.deleteRecord(table_name, attr_name, where_delete);
+    API.deleteRecord(table_name, attr_name, where_delete);
+    std::cout<<">>> SUCCESS"<<std::endl;
 }
 
 void Interpreter::EXEC_INSERT(){
-    //API API;
+    API API;
     CatalogManager CM;
     std::string table_name;
     int check_index;
@@ -329,12 +341,13 @@ void Interpreter::EXEC_INSERT(){
         throw 1;//格式错误
     if(num_of_insert!=attr_exist.num)
         throw 3;//插入的数量不正确
-    //API.insertRecord(table_name, tuple_insert);
+    API.insertRecord(table_name, tuple_insert);
+    std::cout<<">>> SUCCESS"<<std::endl;
 }
 
 //还需要table的显示
 void Interpreter::EXEC_SELECT(){
-    //API API;
+    API API;
     CatalogManager CM;
     std::string table_name;
     std::vector<std::string> attr_name;
@@ -350,6 +363,7 @@ void Interpreter::EXEC_SELECT(){
     if(getWord(7, check_index)=="*")
     {
         flag=1;
+        check_index++;
     }
     else{
         check_index=7;
@@ -425,24 +439,23 @@ void Interpreter::EXEC_SELECT(){
                         break;
                     default:
                         try {
-                            if((tmp_value[0]!='\''&&tmp_value[tmp_value.length()-1]!='\'')||(tmp_value[0]!='"'&&tmp_value[tmp_value.length()-1]!='"'))
+                            if(!(tmp_value[0]!='\''&&tmp_value[tmp_value.length()-1]!='\'')&&!(tmp_value[0]!='"'&&tmp_value[tmp_value.length()-1]!='"'))
                                 throw 1;//格式不正确
                             tmp_where.data.datas=tmp_value.substr(1,tmp_value.length()-2);
                         } catch (...) {
                             throw 2;//转换失败
                         }
-                        break;
                 }
                 break;
             }
         }
-        target_name.push_back(tmp_target_name);
+        
         where_select.push_back(tmp_where);
         if(query[check_index+1]=='\0')
             break;
-        if(getLower(query, check_index+1).substr(check_index+1,3)=="and")//假设关系链接是and
+        else if(getLower(query, check_index+1).substr(check_index+1,3)=="and")//假设关系链接是and
             op=1;
-        if(getLower(query, check_index+1).substr(check_index+1,2)=="or")//假设关系链接是or
+        else if(getLower(query, check_index+1).substr(check_index+1,2)=="or")//假设关系链接是or
             op=0;
         else
             throw 1;
@@ -450,7 +463,7 @@ void Interpreter::EXEC_SELECT(){
         check_index++;
     }
     
-    //Table output_table=API.selectRecord(table_name, target_name, where_select,op);
+    Table output_table=API.selectRecord(table_name, target_name, where_select,op);
     
     //以下是输出函数，等到api做好了以后再调
     /*
@@ -526,28 +539,6 @@ void Interpreter::EXEC_SELECT(){
      */
 }
 
-void Interpreter::EXEC_CREATE_INDEX(){
-    CatalogManager CM;
-    //API API;
-    std::string index_name;
-    std::string table_name;
-    std::string attr_name;
-    int check_index;
-    index_name=getWord(13, check_index);
-    check_index++;
-    if(getLower(query, check_index).substr(check_index,2)!="on")
-        throw 1;//格式错误
-    table_name=getWord(check_index+3, check_index);
-    if(!CM.hasTable(table_name))
-        throw 2;//table not exist
-    if(query[check_index+1]!='(')
-        throw 1;//格式错误
-    attr_name=getWord(check_index+3, check_index);
-    if(query[check_index+1]!=')'||query[check_index+3]!='\0')
-        throw 1;//格式错误
-    //API.createIndex(table_name, index_name, attr_name);
-}
-
 void Interpreter::EXEC_CREATE_TABLE(){
     //输入表名
     std::string table_name;
@@ -621,8 +612,23 @@ void Interpreter::EXEC_CREATE_TABLE(){
         attr_create.num=attr_num;
     }
     //调用CatalogManager，将表的信息插入进去
-    CatalogManager CM;
-    CM.createTable(table_name, attr_create, primary, index_create);//改成API
+    API API;
+    API.createTable(table_name, attr_create, primary, index_create);
+    std::cout<<">>> SUCCESS"<<std::endl;
+}
+
+
+
+void Interpreter::EXEC_DROP_TABLE(){
+    API API;
+    std::string table_name;
+    int check_index;
+    //得到table的名字
+    table_name=getWord(11, check_index);
+    //如果table的名字之后有多余字符串，则是格式错误
+    if(query[check_index+1]!='\0')
+        throw 1;//输入错误
+    API.dropTable(table_name);
     std::cout<<">>> SUCCESS"<<std::endl;
 }
 
