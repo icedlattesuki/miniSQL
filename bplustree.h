@@ -1045,8 +1045,8 @@ int BPlusTree<T>::getFileSize(std::string fname) {
 template <class T>
 void BPlusTree<T>::readFromDiskAll()
 {
-    //std::string fname = "./database/index/" + file_name;
-    std::string fname = file_name;
+    std::string fname = "./database/index/" + file_name;
+    //std::string fname = file_name;
     int block_num = getFileSize(fname) / PAGESIZE;
 
 	if (block_num <= 0)
@@ -1088,8 +1088,8 @@ void BPlusTree<T>::readFromDisk(char* start, char* end)
 template <class T>
 void BPlusTree<T>::writtenbackToDiskAll()
 {
-    //std::string fname = "./database/index/" + file_name;
-    std::string fname = file_name;
+    std::string fname = "./database/index/" + file_name;
+    //std::string fname = file_name;
 	int block_num = getFileSize(fname) / PAGESIZE;
 
 	//if (block_num <= 0)
