@@ -125,13 +125,13 @@ void Interpreter::EXEC(){
         std::cout<<">>> Error: Primary key conflict!"<<std::endl;
     }
     catch(data_type_conflict error) {
-        std::cout<<">>> Error: Data type conflict!"<<std::endl;
+        std::cout<<">>> Error: data type conflict!"<<std::endl;
     }
     catch(index_full error) {
         std::cout<<">>> Error: Index full!"<<std::endl;
     }
     catch(unique_conflict error) {
-        std::cout<<">>> Error: Unique conflict!"<<std::endl;
+        std::cout<<">>> Error: unique conflict!"<<std::endl;
     }
     catch(exit_command error){
         std::cout<<">>> Bye bye~"<<std::endl;
@@ -288,7 +288,7 @@ void Interpreter::EXEC_DELETE(){
                     break;
                 default:
                     try {
-                        if(!(value_delete[0]!='\''&&value_delete[value_delete.length()-1]!='\'')&&!(value_delete[0]!='"'&&value_delete[value_delete.length()-1]!='"'))
+                        if(!(value_delete[0]=='\''&&value_delete[value_delete.length()-1]=='\'')&&!(value_delete[0]=='"'&&value_delete[value_delete.length()-1]=='"'))
                             throw 1;//格式不正确
                         where_delete.data.datas=value_delete.substr(1,value_delete.length()-2);
                     } catch (...) {
@@ -385,6 +385,7 @@ void Interpreter::EXEC_SELECT(){
     std::string tmp_value;
     Where tmp_where;
     std::string relation;
+    Table output_table;
     char op=0;
     int check_index;
     int flag=0;//判断是否为select *
@@ -422,84 +423,88 @@ void Interpreter::EXEC_SELECT(){
         }
     }
     check_index++;
-    if(getLower(query, check_index).substr(check_index,5)!="where")
-        throw input_format_error();//格式错误
-    check_index+=6;
-    while(1){
-        tmp_target_name=getWord(check_index, check_index);
-        if(!CM.hasAttribute(table_name, tmp_target_name))
-            throw attribute_not_exist();
-        target_name.push_back(tmp_target_name);
-        relation=getRelation(check_index+1, check_index);
-        if(relation=="<")
-            tmp_where.relation_character=LESS;
-        else if(relation=="< =")
-            tmp_where.relation_character=LESS_OR_EQUAL;
-        else if(relation=="=")
-            tmp_where.relation_character=EQUAL;
-        else if(relation=="> =")
-            tmp_where.relation_character=GREATER_OR_EQUAL;
-        else if(relation==">")
-            tmp_where.relation_character=GREATER;
-        else if(relation=="! =")
-            tmp_where.relation_character=NOT_EQUAL;
-        else
+    if(query[check_index]=='\0')
+        output_table=API.selectRecord(table_name, target_name, where_select,op);
+    else{
+        if(getLower(query, check_index).substr(check_index,5)!="where")
             throw input_format_error();//格式错误
-        tmp_value=getWord(check_index+1, check_index);
-        for(int i=0;i<tmp_attr.num;i++)
-        {
-            if(tmp_target_name==tmp_attr.name[i]){
-                tmp_where.data.type=tmp_attr.type[i];
-                switch (tmp_where.data.type) {
-                    case -1:
-                        try {
-                            tmp_where.data.datai=stringToNum<int>(tmp_value);
-                        } catch (...) {
-                            throw data_type_conflict();//转换失败
-                        }
-                        break;
-                    case 0:
-                        try {
-                            tmp_where.data.dataf=stringToNum<float>(tmp_value);
-                        } catch (...) {
-                            throw data_type_conflict();//转换失败
-                        }
-                        break;
-                    default:
-                        try {
-                            if(!(tmp_value[0]!='\''&&tmp_value[tmp_value.length()-1]!='\'')&&!(tmp_value[0]!='"'&&tmp_value[tmp_value.length()-1]!='"'))
-                                throw input_format_error();//格式不正确
-                            tmp_where.data.datas=tmp_value.substr(1,tmp_value.length()-2);
-                        }
-                        catch(input_format_error error){
-                            throw input_format_error();
-                        }
-                        catch (...) {
-                            throw data_type_conflict();//转换失败
-                        }
+        check_index+=6;
+        while(1){
+            tmp_target_name=getWord(check_index, check_index);
+            if(!CM.hasAttribute(table_name, tmp_target_name))
+                throw attribute_not_exist();
+            target_name.push_back(tmp_target_name);
+            relation=getRelation(check_index+1, check_index);
+            if(relation=="<")
+                tmp_where.relation_character=LESS;
+            else if(relation=="< =")
+                tmp_where.relation_character=LESS_OR_EQUAL;
+            else if(relation=="=")
+                tmp_where.relation_character=EQUAL;
+            else if(relation=="> =")
+                tmp_where.relation_character=GREATER_OR_EQUAL;
+            else if(relation==">")
+                tmp_where.relation_character=GREATER;
+            else if(relation=="! =")
+                tmp_where.relation_character=NOT_EQUAL;
+            else
+                throw input_format_error();//格式错误
+            tmp_value=getWord(check_index+1, check_index);
+            for(int i=0;i<tmp_attr.num;i++)
+            {
+                if(tmp_target_name==tmp_attr.name[i]){
+                    tmp_where.data.type=tmp_attr.type[i];
+                    switch (tmp_where.data.type) {
+                        case -1:
+                            try {
+                                tmp_where.data.datai=stringToNum<int>(tmp_value);
+                            } catch (...) {
+                                throw data_type_conflict();//转换失败
+                            }
+                            break;
+                        case 0:
+                            try {
+                                tmp_where.data.dataf=stringToNum<float>(tmp_value);
+                            } catch (...) {
+                                throw data_type_conflict();//转换失败
+                            }
+                            break;
+                        default:
+                            try {
+                                if(!(tmp_value[0]!='\''&&tmp_value[tmp_value.length()-1]!='\'')&&!(tmp_value[0]!='"'&&tmp_value[tmp_value.length()-1]!='"'))
+                                    throw input_format_error();//格式不正确
+                                tmp_where.data.datas=tmp_value.substr(1,tmp_value.length()-2);
+                            }
+                            catch(input_format_error error){
+                                throw input_format_error();
+                            }
+                            catch (...) {
+                                throw data_type_conflict();//转换失败
+                            }
+                    }
+                    break;
                 }
-                break;
             }
+            
+            where_select.push_back(tmp_where);
+            if(query[check_index+1]=='\0')
+                break;
+            else if(getLower(query, check_index+1).substr(check_index+1,3)=="and")//假设关系链接是and
+                op=1;
+            else if(getLower(query, check_index+1).substr(check_index+1,2)=="or")//假设关系链接是or
+                op=0;
+            else
+                throw 1;
+            getWord(check_index+1, check_index);
+            check_index++;
         }
         
-        where_select.push_back(tmp_where);
-        if(query[check_index+1]=='\0')
-            break;
-        else if(getLower(query, check_index+1).substr(check_index+1,3)=="and")//假设关系链接是and
-            op=1;
-        else if(getLower(query, check_index+1).substr(check_index+1,2)=="or")//假设关系链接是or
-            op=0;
-        else
-            throw 1;
-        getWord(check_index+1, check_index);
-        check_index++;
+        output_table=API.selectRecord(table_name, target_name, where_select,op);
     }
     
-    Table output_table=API.selectRecord(table_name, target_name, where_select,op);
+    //以下是输出函数
     
-    //以下是输出函数，等到api做好了以后再调
-    /*
-    Attribute attr_record=output_table.getAttr();
+    Attribute attr_record=output_table.attr_;
     std::vector<Tuple> output_tuple=output_table.getTuple();
     int longest=-1;
     for(int index=0;index<attr_record.num;index++){
@@ -509,33 +514,32 @@ void Interpreter::EXEC_SELECT(){
     for(int index=0;index<attr_record.num;index++){
         int type=attr_record.type[index];
         if(type==-1){
-            int longest=-1;
             for(int i=0;i<output_tuple.size();i++){
                 if(longest<getBits(output_tuple[i].getData()[index].datai)){
                     longest=getBits(output_tuple[i].getData()[index].datai);
                 }
             }
-            type=longest;
         }
         if(type==0){
-            int longest=-1;
             for(int i=0;i<output_tuple.size();i++){
                 if(longest<getBits(output_tuple[i].getData()[index].dataf)){
                     longest=getBits(output_tuple[i].getData()[index].dataf);
                 }
             }
-            type=longest;
         }
-        if(type>longest)
-            longest=type;
-    }
-    for(int index=0;index<attr_record.num;index++){
-        if((int)attr_record.name[index].length()>longest)
-            longest=(int)attr_record.name[index].length();
+        if(type>0){
+            for(int i=0;i<output_tuple.size();i++){
+                if(longest<output_tuple[i].getData()[index].datas.length()){
+                    longest=(int)output_tuple[i].getData()[index].datas.length();
+                }
+            }
+        }
     }
     for(int index=0;index<attr_record.num;index++){
         if(index!=attr_record.num-1)
             std::cout<<attr_record.name[index]<<std::setw(longest-(int)attr_record.name[index].length())<<"|";
+        else if(index==attr_record.num-1)
+            std::cout<<attr_record.name[index]<<std::endl;
         else
             std::cout<<attr_record.name[index]<<std::setw(longest-(int)attr_record.name[index].length())<<std::endl;
     }
@@ -548,19 +552,19 @@ void Interpreter::EXEC_SELECT(){
         {
             switch (output_tuple[index].getData()[i].type) {
                 case -1:
-                    if(index!=attr_record.num-1)
+                    if(i!=attr_record.num-1)
                         std::cout<<output_tuple[index].getData()[i].datai<<std::setw(longest-getBits(output_tuple[index].getData()[i].datai))<<"|";
                     else
                         std::cout<<output_tuple[index].getData()[i].datai<<std::setw(longest-getBits(output_tuple[index].getData()[i].datai))<<std::endl;
                     break;
                 case 0:
-                    if(index!=attr_record.num-1)
+                    if(i!=attr_record.num-1)
                         std::cout<<output_tuple[index].getData()[i].dataf<<std::setw(longest-getBits(output_tuple[index].getData()[i].dataf))<<"|";
                     else
                         std::cout<<output_tuple[index].getData()[i].dataf<<std::setw(longest-getBits(output_tuple[index].getData()[i].dataf))<<std::endl;
                     break;
                 default:
-                    if(index!=attr_record.num-1)
+                    if(i!=attr_record.num-1)
                         std::cout<<output_tuple[index].getData()[i].datas<<std::setw(longest-(int)output_tuple[index].getData()[i].datas.length())<<"|";
                     else
                         std::cout<<output_tuple[index].getData()[i].datas<<std::setw(longest-(int)output_tuple[index].getData()[i].datas.length())<<std::endl;
@@ -568,7 +572,6 @@ void Interpreter::EXEC_SELECT(){
             }
         }
     }
-     */
 }
 
 void Interpreter::EXEC_CREATE_TABLE(){
@@ -747,7 +750,7 @@ int Interpreter::getBits(float num){
     int integer_part=num;
     while(integer_part!=0){
         bit++;
-        num=-num;
+        integer_part--;
     }
-    return bit+5;//为了保留小数点的后几位
+    return bit+3;//为了保留小数点的后几位
 }
