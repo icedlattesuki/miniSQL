@@ -37,7 +37,7 @@ public:
 	//如果表不存在，抛出table_not_exist异常
 	//如果属性不存在，抛出attribute_not_exist异常
 	//如果Where条件中的两个数据类型不匹配，抛出data_type_conflict异常
-	void deleteRecord(std::string table_name, std::string target_attr , Where where);
+	int deleteRecord(std::string table_name, std::string target_attr , Where where);
 	//输入：表名、一个元组对象
 	//输出：void
 	//功能：向对应表内插入一条记录
@@ -84,7 +84,6 @@ private:
 private:
 	RecordManager record;
 	CatalogManager catalog;
-	IndexManager index;
 };
 
 //用于对vector的sort时排序

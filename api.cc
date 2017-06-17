@@ -29,10 +29,11 @@ Table API::selectRecord(std::string table_name, std::vector<std::string> target_
 {
 	if (target_attr.size() == 0) {
 		return record.selectRecord(table_name);
-	} else {
-        
-		Table table1 = record.selectRecord(table_name, target_attr.at(0), where.at(0));
-		Table table2 = record.selectRecord(table_name, target_attr.at(1), where.at(1));
+	} else if (target_attr.size() == 1) {
+        return record.selectRecord(table_name, target_attr[0], where[0]);
+    } else {
+		Table table1 = record.selectRecord(table_name, target_attr[0], where[0]);
+		Table table2 = record.selectRecord(table_name, target_attr[1], where[1]);
 
 		if (operation)
 			return joinTable(table1, table2);
@@ -47,13 +48,14 @@ Table API::selectRecord(std::string table_name, std::vector<std::string> target_
 //如果表不存在，抛出table_not_exist异常
 //如果属性不存在，抛出attribute_not_exist异常
 //如果Where条件中的两个数据类型不匹配，抛出data_type_conflict异常
-void API::deleteRecord(std::string table_name , std::string target_attr , Where where)
+int API::deleteRecord(std::string table_name , std::string target_attr , Where where)
 {
+    int result;
 	if (target_attr == "")
-		record.deleteRecord(table_name);
+		result = record.deleteRecord(table_name);
 	else
-		record.deleteRecord(table_name, target_attr, where);
-	return;
+		result = record.deleteRecord(table_name, target_attr, where);
+	return result;
 }
 //输入：表名、一个元组对象
 //输出：void
@@ -101,6 +103,8 @@ bool API::dropTable(std::string table_name)
 //如果对应属性已经有了索引，抛出index_exist异常
 bool API::createIndex(std::string table_name, std::string index_name, std::string attr_name)
 {
+    IndexManager index(table_name);
+    
 	std::string file_path = "INDEX_FILE_" + attr_name + "_" + table_name;
 	int type;
 
@@ -113,7 +117,7 @@ bool API::createIndex(std::string table_name, std::string index_name, std::strin
 		}
 	}
 	index.createIndex(file_path, type);
-	record.createIndex(table_name, index_name);
+	record.createIndex(index , table_name, attr_name);
 
 	return true;
 }
@@ -126,6 +130,8 @@ bool API::createIndex(std::string table_name, std::string index_name, std::strin
 //如果对应属性没有索引，抛出index_not_exist异常
 bool API::dropIndex(std::string table_name, std::string index_name)
 {
+    IndexManager index(table_name);
+    
 	std::string attr_name = catalog.IndextoAttr(table_name, index_name);
 	std::string file_path = "INDEX_FILE_" + attr_name + "_" + table_name;
 	int type;
@@ -139,7 +145,9 @@ bool API::dropIndex(std::string table_name, std::string index_name)
 	}
 	index.dropIndex(file_path, type);
 	catalog.dropIndex(table_name, index_name);
-
+	
+	file_path = "./database/index/" + file_path;
+    remove(file_path.c_str());
 	return true;
 }
 
@@ -155,7 +163,7 @@ Table API::unionTable(Table &table1, Table &table2)
 	std::sort(tuple1.begin(), tuple1.end(), sortcmp);
 	std::sort(tuple2.begin(), tuple2.end(), sortcmp);
 
-	std::set_union(tuple1.begin(), tuple1.end(), tuple2.begin(), tuple2.end(), result_tuple.begin(), calcmp);
+	std::set_union(tuple1.begin(), tuple1.end(), tuple2.begin(), tuple2.end(), std::back_inserter(result_tuple), calcmp);
 
 	return result_table;
 }
@@ -164,7 +172,7 @@ Table API::unionTable(Table &table1, Table &table2)
 Table API::joinTable(Table &table1, Table &table2)
 {
 	Table result_table(table1);
-    std::vector<Tuple>& result_tuple = result_table.getTuple();
+    std::vector<Tuple> result_tuple = result_table.getTuple();
 	std::vector<Tuple> tuple1 = table1.getTuple();
 	std::vector<Tuple> tuple2 = table2.getTuple();
 
@@ -172,7 +180,7 @@ Table API::joinTable(Table &table1, Table &table2)
 	std::sort(tuple1.begin(), tuple1.end(), sortcmp);
 	std::sort(tuple2.begin(), tuple2.end(), sortcmp);
 
-	std::set_intersection(tuple1.begin(), tuple1.end(), tuple2.begin(), tuple2.end(), result_tuple.begin(), calcmp);
+    std::set_intersection(tuple1.begin(), tuple1.end(), tuple2.begin(), tuple2.end(), std::back_inserter(result_tuple), calcmp);
 
 	return result_table;
 }
