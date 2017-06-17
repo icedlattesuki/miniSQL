@@ -73,10 +73,10 @@ public:
 class Table{
 private:
     std::string title_;  //表名
-    Attribute attr_;  //数据的类型
     std::vector<Tuple> tuple_;  //存放所有的元组
     Index index_;  //表的索引信息
 public:
+    Attribute attr_;  //数据的类型
     //构造函数
     Table(){};
     Table(std::string title,Attribute attr);

@@ -146,10 +146,10 @@ int Table::dropIndex(std::string index_name){
 // }
 
 //返回一些private的值
-inline std::string Table::getTitle(){
+std::string Table::getTitle(){
     return title_;
 }
-inline Attribute Table::getAttr(){
+Attribute Table::getAttr(){
     return attr_;
 }
 std::vector<Tuple>& Table::getTuple(){
