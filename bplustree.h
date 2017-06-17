@@ -11,6 +11,13 @@
 
 #include <vector>
 #include <string>
+#include <map>
+#include <iostream>
+#include "basic.h"
+#include "const.h"
+#include "exception.h"
+#include "buffer_manager.h"
+
 
 //模板类TreeNode，用于存放B+树的结点数据以及进行相关的操作
 //使用模板类保证直接适配int，float, string三种类型数据
@@ -72,6 +79,8 @@ public:
     //功能：返回一定范围的value容器
     bool findRange(unsigned int index, T& key, std::vector<int>& vals);
     bool findRange2(unsigned int index, std::vector<int>& vals);
+    
+    void printl();
 };
 
 //模板类BPlusTree，用于对整个B+树的操作
@@ -142,6 +151,8 @@ public:
     void writtenbackToDiskAll();
 	//在磁盘中读取某一块的数据
     void readFromDisk(char *start, char* end);
+    
+    void printleaf();
 
 private:
 	//初始化B+树，并分配内存空间
@@ -455,11 +466,11 @@ TreeNode<T>* TreeNode<T>::nextLeaf()
 //输出:到达终止key返回true，否则返回flase
 //功能：返回一定范围的value容器
 template <class T>
-bool TreeNode<T>::findRange(unsigned int index, T& key, std::vector<int>& vals)
+bool TreeNode<T>::findRange(unsigned int index, T& key, std::vector<int>& valsout)
 {
 	unsigned int i;
 	for (i = index; i < num && keys[i] <= key; i++)
-		vals.push_back(vals[i]);
+		valsout.push_back(vals[i]);
 
 	if (keys[i] >= key)
 		return true;
@@ -468,11 +479,11 @@ bool TreeNode<T>::findRange(unsigned int index, T& key, std::vector<int>& vals)
 }
 
 template <class T>
-bool TreeNode<T>::findRange2(unsigned int index, std::vector<int>& vals)
+bool TreeNode<T>::findRange2(unsigned int index, std::vector<int>& valsout)
 {
 	unsigned int i;
 	for (i = index; i < num; i++)
-		vals.push_back(vals[i]);
+		valsout.push_back(vals[i]);
 
 	return false;
 }
@@ -1020,8 +1031,13 @@ void BPlusTree<T>::searchRange(T& key1, T& key2, std::vector<int>& vals, int fla
 template <class T>
 int BPlusTree<T>::getFileSize(std::string fname) {
     FILE* f = fopen(fname.c_str() , "r");
+    if (f == NULL) {
+        f = fopen(fname.c_str(), "w+");
+        fclose(f);
+        f = fopen(fname.c_str() , "r");
+    }
     fseek(f , 0 , SEEK_END);
-    int size = ftell(f);
+    int size = (int)ftell(f);
     fclose(f);
     return size;
 }
@@ -1029,7 +1045,8 @@ int BPlusTree<T>::getFileSize(std::string fname) {
 template <class T>
 void BPlusTree<T>::readFromDiskAll()
 {
-    std::string fname = "./database/index/" + file_name;
+    //std::string fname = "./database/index/" + file_name;
+    std::string fname = file_name;
     int block_num = getFileSize(fname) / PAGESIZE;
 
 	if (block_num <= 0)
@@ -1055,7 +1072,7 @@ void BPlusTree<T>::readFromDisk(char* start, char* end)
     T key;
     int value;
 
-    while(*valueBegin != '\0' && valueBegin < end)
+    while(/*((*valueBegin != 0) || (valueBegin == start)) && */valueBegin < end)
         // there are available position in the block
     {
         key = *(T*)indexBegin;
@@ -1071,7 +1088,8 @@ void BPlusTree<T>::readFromDisk(char* start, char* end)
 template <class T>
 void BPlusTree<T>::writtenbackToDiskAll()
 {
-    std::string fname = "./database/index/" + file_name;
+    //std::string fname = "./database/index/" + file_name;
+    std::string fname = file_name;
 	int block_num = getFileSize(fname) / PAGESIZE;
 
 	//if (block_num <= 0)
@@ -1099,7 +1117,8 @@ void BPlusTree<T>::writtenbackToDiskAll()
             memcpy(t, value, value_size);
             t += value_size;
 		}
-
+        
+        memset(t, '\n', sizeof(char));
 		int page_id = buffer.getPageId(fname, j);
 		buffer.flushPage(page_id , fname , j);
         ntmp = ntmp->nextLeafNode;
@@ -1119,5 +1138,24 @@ void BPlusTree<T>::writtenbackToDiskAll()
 
 }
 
+template <class T>
+void BPlusTree<T>::printleaf()
+{
+    Tree p = leafHead;
+    while (p != NULL) {
+        p->printl();
+        p = p->nextLeaf();
+    }
+    
+    return;
+}
 
+template <class T>
+void TreeNode<T>::printl()
+{
+    for (int i = 0; i < num; i++)
+        std::cout << "->" << keys[i];
+    std::cout<<std::endl;
+    
+}
 #endif
