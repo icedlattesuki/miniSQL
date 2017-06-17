@@ -30,6 +30,7 @@ Table API::selectRecord(std::string table_name, std::vector<std::string> target_
 	if (target_attr.size() == 0) {
 		return record.selectRecord(table_name);
 	} else {
+        
 		Table table1 = record.selectRecord(table_name, target_attr.at(0), where.at(0));
 		Table table2 = record.selectRecord(table_name, target_attr.at(1), where.at(1));
 
@@ -103,7 +104,7 @@ bool API::createIndex(std::string table_name, std::string index_name, std::strin
 	std::string file_path = "INDEX_FILE_" + attr_name + "_" + table_name;
 	int type;
 
-	catalog.createIndex(table_name, index_name, attr_name);
+	catalog.createIndex(table_name, attr_name, index_name);
 	Attribute attr = catalog.getAttribute(table_name);
 	for (int i = 0; i < attr.num; i++) {
 		if (attr.name[i] == attr_name) {
