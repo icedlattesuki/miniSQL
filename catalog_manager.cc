@@ -159,6 +159,13 @@ Attribute CatalogManager::getAttribute(std::string name){
         table_attr.primary_key=-1;
     else
         table_attr.primary_key=str2num(buffer_check.substr(start_index,2));
+    //设置index的信息
+    Index index_record=getIndex(table_name);
+    for(int i=0;i<32;i++)
+        table_attr.has_index[i]=false;
+    for(int i=0;i<index_record.num;i++)
+        table_attr.has_index[index_record.location[i]]=true;
+    
     return table_attr;
 }
 
