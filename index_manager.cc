@@ -11,11 +11,20 @@
 #include "basic.h"
 #include "buffer_manager.h"
 #include "bplustree.h"
+#include "catalog_manager.h"
 #include <string>
 #include <vector>
 #include <map>
 
-IndexManager::IndexManager(){}
+IndexManager::IndexManager(std:: string table_name)
+{
+    CatalogManager catalog;
+    Attribute attr = catalog.getAttribute(table_name);
+    
+    for (int i = 0; i < attr.num; i++)
+        if (attr.has_index[i])
+            createIndex("INDEX_FILE_" + attr.name[i] + "_" + table_name, attr.type[i]);
+}
 
 IndexManager::~IndexManager()
 {

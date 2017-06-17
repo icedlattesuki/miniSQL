@@ -19,7 +19,7 @@
 class IndexManager {
 public:
 	//构造函数
-	IndexManager();
+    IndexManager(std::string table_name);
 	//析构函数
 	~IndexManager();
 	//输入：Index文件名(路径)，索引的key的类型
