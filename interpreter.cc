@@ -109,6 +109,30 @@ void Interpreter::EXEC(){
     catch(table_not_exist error) {
         std::cout<<">>> Error: Table not exist!"<<std::endl;
     }
+    catch(attribute_not_exist error) {
+        std::cout<<">>> Error: Attribute not exist!"<<std::endl;
+    }
+    catch(index_exist error) {
+        std::cout<<">>> Error: Index has existed!"<<std::endl;
+    }
+    catch(index_not_exist error) {
+        std::cout<<">>> Error: Index not existed!"<<std::endl;
+    }
+    catch(tuple_type_conflict error) {
+        std::cout<<">>> Error: Tuple type conflict!"<<std::endl;
+    }
+    catch(primary_key_conflict error) {
+        std::cout<<">>> Error: Primary key conflict!"<<std::endl;
+    }
+    catch(data_type_conflict error) {
+        std::cout<<">>> Error: Data type conflict!"<<std::endl;
+    }
+    catch(index_full error) {
+        std::cout<<">>> Error: Index full!"<<std::endl;
+    }
+    catch(unique_conflict error) {
+        std::cout<<">>> Error: Unique conflict!"<<std::endl;
+    }
     catch(exit_command error){
         std::cout<<">>> Bye bye~"<<std::endl;
         exit(0);
@@ -131,7 +155,7 @@ void Interpreter::EXEC_CREATE_INDEX(){
         throw 1;//格式错误
     table_name=getWord(check_index+3, check_index);
     if(!CM.hasTable(table_name))
-        throw 2;//table not exist
+        throw table_not_exist();//table not exist
     if(query[check_index+1]!='(')
         throw 1;//格式错误
     attr_name=getWord(check_index+3, check_index);
@@ -252,14 +276,14 @@ void Interpreter::EXEC_DELETE(){
                     try {
                         where_delete.data.datai=stringToNum<int>(value_delete);
                     } catch (...) {
-                        throw 2;//转换失败
+                        throw data_type_conflict();//转换失败
                     }
                     break;
                 case 0:
                     try {
                         where_delete.data.dataf=stringToNum<float>(value_delete);
                     } catch (...) {
-                        throw 2;//转换失败
+                        throw data_type_conflict();//转换失败
                     }
                     break;
                 default:
@@ -268,7 +292,7 @@ void Interpreter::EXEC_DELETE(){
                             throw 1;//格式不正确
                         where_delete.data.datas=value_delete.substr(1,value_delete.length()-2);
                     } catch (...) {
-                        throw 2;//转换失败
+                        throw data_type_conflict();//转换失败
                     }
                     break;
             }
@@ -312,25 +336,29 @@ void Interpreter::EXEC_INSERT(){
                 try {
                     insert_data.datai=stringToNum<int>(value_insert);
                 } catch (...) {
-                    throw 2;//转换失败
+                    throw data_type_conflict();//转换失败
                 }
                 break;
             case 0:
                 try {
                     insert_data.dataf=stringToNum<float>(value_insert);
                 } catch (...) {
-                    throw 2;//转换失败
+                    throw data_type_conflict();//转换失败
                 }
                 break;
             default:
                 try {
                     if(!(value_insert[0]=='\''&&value_insert[value_insert.length()-1]=='\'')&&!(value_insert[0]=='"'&&value_insert[value_insert.length()-1]=='"'))
-                        throw 1;//格式不正确
+                        throw input_format_error();//格式不正确
                     if(value_insert.length()-1>attr_exist.type[num_of_insert])
-                        throw 2;//长度超过限制
+                        throw input_format_error();//长度超过限制
                     insert_data.datas=value_insert.substr(1,value_insert.length()-2);
-                } catch (...) {
-                    throw 2;//转换失败
+                }
+                catch(input_format_error error){
+                    throw input_format_error();
+                }
+                catch (...) {
+                    throw data_type_conflict();//转换失败
                 }
                 break;
         }
@@ -338,9 +366,9 @@ void Interpreter::EXEC_INSERT(){
         num_of_insert++;
     }
     if(query[check_index+1]=='\0')
-        throw 1;//格式错误
+        throw input_format_error();//格式错误
     if(num_of_insert!=attr_exist.num)
-        throw 3;//插入的数量不正确
+        throw input_format_error();//插入的数量不正确
     API.insertRecord(table_name, tuple_insert);
     std::cout<<">>> SUCCESS"<<std::endl;
 }
@@ -376,7 +404,7 @@ void Interpreter::EXEC_SELECT(){
         }
     }
     if(getLower(query, check_index).substr(check_index,4)!="from")
-        throw 1;//格式错误
+        throw input_format_error();//格式错误
     check_index+=5;
     table_name=getWord(check_index, check_index);
     if(!CM.hasTable(table_name))
@@ -395,12 +423,12 @@ void Interpreter::EXEC_SELECT(){
     }
     check_index++;
     if(getLower(query, check_index).substr(check_index,5)!="where")
-        throw 1;//格式错误
+        throw input_format_error();//格式错误
     check_index+=6;
     while(1){
         tmp_target_name=getWord(check_index, check_index);
         if(!CM.hasAttribute(table_name, tmp_target_name))
-            throw 1;
+            throw attribute_not_exist();
         target_name.push_back(tmp_target_name);
         relation=getRelation(check_index+1, check_index);
         if(relation=="<")
@@ -416,7 +444,7 @@ void Interpreter::EXEC_SELECT(){
         else if(relation=="! =")
             tmp_where.relation_character=NOT_EQUAL;
         else
-            throw 1;//格式错误
+            throw input_format_error();//格式错误
         tmp_value=getWord(check_index+1, check_index);
         for(int i=0;i<tmp_attr.num;i++)
         {
@@ -427,23 +455,27 @@ void Interpreter::EXEC_SELECT(){
                         try {
                             tmp_where.data.datai=stringToNum<int>(tmp_value);
                         } catch (...) {
-                            throw 2;//转换失败
+                            throw data_type_conflict();//转换失败
                         }
                         break;
                     case 0:
                         try {
                             tmp_where.data.dataf=stringToNum<float>(tmp_value);
                         } catch (...) {
-                            throw 2;//转换失败
+                            throw data_type_conflict();//转换失败
                         }
                         break;
                     default:
                         try {
                             if(!(tmp_value[0]!='\''&&tmp_value[tmp_value.length()-1]!='\'')&&!(tmp_value[0]!='"'&&tmp_value[tmp_value.length()-1]!='"'))
-                                throw 1;//格式不正确
+                                throw input_format_error();//格式不正确
                             tmp_where.data.datas=tmp_value.substr(1,tmp_value.length()-2);
-                        } catch (...) {
-                            throw 2;//转换失败
+                        }
+                        catch(input_format_error error){
+                            throw input_format_error();
+                        }
+                        catch (...) {
+                            throw data_type_conflict();//转换失败
                         }
                 }
                 break;
