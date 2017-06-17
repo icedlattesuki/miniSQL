@@ -555,6 +555,7 @@ void RecordManager::searchWithIndex(std::string table_name , std::string target_
 void RecordManager::conditionDeleteInBlock(std::string table_name , int block_id , Attribute attr , int index , Where where) {
     BufferManager buffer_manager;
     //获取当前块的句柄
+    table_name = "./database/data/" + table_name;//新增
     char* p = buffer_manager.getPage(table_name , block_id);
     char* t = p;
     //遍历块中所有记录
