@@ -189,7 +189,9 @@ void Interpreter::EXEC_EXIT(){
 }
 
 void Interpreter::EXEC_FILE(){
-    int check_index;
+    int check_index=0;
+    int start_index=0;
+    std::string tmp_query;
     //得到文件路径
     std::string file_path=getWord(9, check_index);
     //如果路径后还有额外的字符，则是格式错误
@@ -203,9 +205,18 @@ void Interpreter::EXEC_FILE(){
     //把文件流中的字符输入到字符串流中
     ss<<fs.rdbuf();
     //获取流中的字符串
-    query=ss.str();
+    tmp_query=ss.str();
     //再执行一次
-    EXEC();
+    check_index=0;
+    do{
+        while(tmp_query[check_index]!='\n')
+            check_index++;
+        query=tmp_query.substr(start_index,check_index-start_index);
+        check_index++;
+        start_index=check_index;
+        Normalize();
+        EXEC();
+    }while (tmp_query[check_index]!='\0');
 }
 
 void Interpreter::EXEC_SHOW(){
@@ -505,69 +516,141 @@ void Interpreter::EXEC_SELECT(){
     //以下是输出函数
     
     Attribute attr_record=output_table.attr_;
+    int use[32]={0};
+    if(attr_name.size()==0){
+        for(int i=0;i<attr_record.num;i++)
+            use[i]=i;
+    }
+    else{
+        for(int i=0;i<attr_name.size();i++)
+            for(int j=0;j<attr_record.num;j++){
+                if(attr_record.name[j]==attr_name[i])
+                {
+                    use[i]=j;
+                    break;
+                }
+            }
+    }
     std::vector<Tuple> output_tuple=output_table.getTuple();
     int longest=-1;
-    for(int index=0;index<attr_record.num;index++){
-        if((int)attr_record.name[index].length()>longest)
-            longest=(int)attr_record.name[index].length();
+    for(int index=0;index<attr_name.size();index++){
+        if((int)attr_record.name[use[index]].length()>longest)
+            longest=(int)attr_record.name[use[index]].length();
     }
-    for(int index=0;index<attr_record.num;index++){
-        int type=attr_record.type[index];
+    for(int index=0;index<attr_name.size();index++){
+        int type=attr_record.type[use[index]];
         if(type==-1){
             for(int i=0;i<output_tuple.size();i++){
-                if(longest<getBits(output_tuple[i].getData()[index].datai)){
-                    longest=getBits(output_tuple[i].getData()[index].datai);
+                if(longest<getBits(output_tuple[i].getData()[use[index]].datai)){
+                    longest=getBits(output_tuple[i].getData()[use[index]].datai);
                 }
             }
         }
         if(type==0){
             for(int i=0;i<output_tuple.size();i++){
-                if(longest<getBits(output_tuple[i].getData()[index].dataf)){
-                    longest=getBits(output_tuple[i].getData()[index].dataf);
+                if(longest<getBits(output_tuple[i].getData()[use[index]].dataf)){
+                    longest=getBits(output_tuple[i].getData()[use[index]].dataf);
                 }
             }
         }
         if(type>0){
             for(int i=0;i<output_tuple.size();i++){
-                if(longest<output_tuple[i].getData()[index].datas.length()){
-                    longest=(int)output_tuple[i].getData()[index].datas.length();
+                if(longest<output_tuple[i].getData()[use[index]].datas.length()){
+                    longest=(int)output_tuple[i].getData()[use[index]].datas.length();
                 }
             }
         }
     }
-    for(int index=0;index<attr_record.num;index++){
-        if(index!=attr_record.num-1)
-            std::cout<<attr_record.name[index]<<std::setw(longest-(int)attr_record.name[index].length())<<"|";
-        else if(index==attr_record.num-1)
-            std::cout<<attr_record.name[index]<<std::endl;
-        else
-            std::cout<<attr_record.name[index]<<std::setw(longest-(int)attr_record.name[index].length())<<std::endl;
+    longest+=1;
+    for(int index=0;index<attr_name.size();index++){
+        if(index!=attr_name.size()-1){
+            for(int i=0;i<(longest-attr_record.name[use[index]].length())/2;i++)
+                printf(" ");
+            printf("%s",attr_record.name[use[index]].c_str());
+            for(int i=0;i<longest-(longest-attr_record.name[use[index]].length())/2-attr_record.name[use[index]].length();i++)
+                printf(" ");
+            printf("|");
+        }
+        else{
+            for(int i=0;i<(longest-attr_record.name[use[index]].length())/2;i++)
+                printf(" ");
+            printf("%s",attr_record.name[use[index]].c_str());
+            for(int i=0;i<longest-(longest-attr_record.name[use[index]].length())/2-attr_record.name[use[index]].length();i++)
+                printf(" ");
+            printf("\n");
+        }
     }
-    for(int index=0;index<attr_record.num*(longest+1);index++){
+    for(int index=0;index<attr_name.size()*(longest+1);index++){
         std::cout<<"-";
     }
     std::cout<<std::endl;
     for(int index=0;index<output_tuple.size();index++){
-        for(int i=0;i<attr_record.num;i++)
+        for(int i=0;i<attr_name.size();i++)
         {
-            switch (output_tuple[index].getData()[i].type) {
+            switch (output_tuple[index].getData()[use[i]].type) {
                 case -1:
-                    if(i!=attr_record.num-1)
-                        std::cout<<output_tuple[index].getData()[i].datai<<std::setw(longest-getBits(output_tuple[index].getData()[i].datai))<<"|";
-                    else
-                        std::cout<<output_tuple[index].getData()[i].datai<<std::setw(longest-getBits(output_tuple[index].getData()[i].datai))<<std::endl;
+                    if(i!=attr_name.size()-1){
+                        int len=output_tuple[index].getData()[use[i]].datai;
+                        len=getBits(len);
+                        for(int i=0;i<(longest-len)/2;i++)
+                            printf(" ");
+                        printf("%d",output_tuple[index].getData()[use[i]].datai);
+                        for(int i=0;i<longest-(longest-len)/2-len;i++)
+                            printf(" ");
+                        printf("|");
+                    }
+                    else{
+                        int len=output_tuple[index].getData()[use[i]].datai;
+                        len=getBits(len);
+                        for(int i=0;i<(longest-len)/2;i++)
+                            printf(" ");
+                        printf("%d",output_tuple[index].getData()[use[i]].datai);
+                        for(int i=0;i<longest-(longest-len)/2-len;i++)
+                            printf(" ");
+                        printf("\n");
+                    }
                     break;
                 case 0:
-                    if(i!=attr_record.num-1)
-                        std::cout<<output_tuple[index].getData()[i].dataf<<std::setw(longest-getBits(output_tuple[index].getData()[i].dataf))<<"|";
-                    else
-                        std::cout<<output_tuple[index].getData()[i].dataf<<std::setw(longest-getBits(output_tuple[index].getData()[i].dataf))<<std::endl;
+                    if(i!=attr_name.size()-1){
+                        float num=output_tuple[index].getData()[use[i]].dataf;
+                        int len=getBits(num);
+                        for(int i=0;i<(longest-len)/2;i++)
+                            printf(" ");
+                        printf("%.2f",output_tuple[index].getData()[use[i]].dataf);
+                        for(int i=0;i<longest-(longest-len)/2-len;i++)
+                            printf(" ");
+                        printf("|");
+                    }
+                    else{
+                        float num=output_tuple[index].getData()[use[i]].dataf;
+                        int len=getBits(num);
+                        for(int i=0;i<(longest-len)/2;i++)
+                            printf(" ");
+                        printf("%.2f",output_tuple[index].getData()[use[i]].dataf);
+                        for(int i=0;i<longest-(longest-len)/2-len;i++)
+                            printf(" ");
+                        printf("\n");
+                    }
                     break;
                 default:
-                    if(i!=attr_record.num-1)
-                        std::cout<<output_tuple[index].getData()[i].datas<<std::setw(longest-(int)output_tuple[index].getData()[i].datas.length())<<"|";
-                    else
-                        std::cout<<output_tuple[index].getData()[i].datas<<std::setw(longest-(int)output_tuple[index].getData()[i].datas.length())<<std::endl;
+                    std::string tmp=output_tuple[index].getData()[use[i]].datas;
+                    if(i!=attr_name.size()-1){
+                        for(int i=0;i<(longest-tmp.length())/2;i++)
+                            printf(" ");
+                        printf("%s",tmp.c_str());
+                        for(int i=0;i<longest-(longest-(int)tmp.length())/2-(int)tmp.length();i++)
+                            printf(" ");
+                        printf("|");
+                    }
+                    else{
+                        std::string tmp=output_tuple[index].getData()[i].datas;
+                        for(int i=0;i<(longest-tmp.length())/2;i++)
+                            printf(" ");
+                        printf("%s",tmp.c_str());
+                        for(int i=0;i<longest-(longest-(int)tmp.length())/2-(int)tmp.length();i++)
+                            printf(" ");
+                        printf("\n");
+                    }
                     break;
             }
         }
@@ -729,6 +812,8 @@ std::string Interpreter::getRelation(int pos,int &end_pos){
 //根据除法得到整形的数字的长度
 int Interpreter::getBits(int num){
     int bit=0;
+    if(num==0)
+        return 1;
     if(num<0){
         bit++;
         num=-num;
@@ -743,6 +828,8 @@ int Interpreter::getBits(int num){
 //根据除法得到小数的数字的长度
 int Interpreter::getBits(float num){
     int bit=0;
+    if(num==0)
+        return 4;
     if(num<0){
         bit++;
         num=-num;
@@ -750,7 +837,7 @@ int Interpreter::getBits(float num){
     int integer_part=num;
     while(integer_part!=0){
         bit++;
-        integer_part--;
+        integer_part/=10;
     }
     return bit+3;//为了保留小数点的后几位
 }
