@@ -1073,7 +1073,7 @@ void BPlusTree<T>::readFromDisk(char* start, char* end)
     int value;
 
     while(/*((*valueBegin != 0) || (valueBegin == start)) && */valueBegin < end)
-        // there are available position in the block
+        //块中仍有空位
     {
         key = *(T*)indexBegin;
         value = *(int*)valueBegin;
@@ -1098,9 +1098,9 @@ void BPlusTree<T>::writtenbackToDiskAll()
     //blockNode* btmp = bm.getBlockHead(file);
     Tree ntmp = leafHead;
     int value_size = sizeof(int);
-	int j;
-
-    for (j = 0; ntmp != NULL; j++) {
+	int i, j;
+    
+    for (j = 0, i = 0; ntmp != NULL; j++) {
         //bm.set_usingSize(*btmp, 0);
         //bm.set_dirty(*btmp);
 		char* p = buffer.getPage(fname, j);
@@ -1108,7 +1108,7 @@ void BPlusTree<T>::writtenbackToDiskAll()
 		memset(p, 0, PAGESIZE);
 
 		char *t = p;
-        for (int i = 0; i < ntmp->num; i++) {
+        for (; i < ntmp->num && t < p+PAGESIZE; i++) {
             char* key = (char*)&(ntmp->keys[i]);
             char* value = (char*)&(ntmp->vals[i]);
 
@@ -1121,7 +1121,9 @@ void BPlusTree<T>::writtenbackToDiskAll()
         memset(t, '\n', sizeof(char));
 		int page_id = buffer.getPageId(fname, j);
 		buffer.flushPage(page_id , fname , j);
-        ntmp = ntmp->nextLeafNode;
+        
+        if (i >= ntmp->num)
+            ntmp = ntmp->nextLeafNode;
     }
 
     while (j < block_num) {
