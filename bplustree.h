@@ -18,6 +18,7 @@
 #include "exception.h"
 #include "buffer_manager.h"
 
+extern BufferManager buffer_manager;
 
 //模板类TreeNode，用于存放B+树的结点数据以及进行相关的操作
 //使用模板类保证直接适配int，float, string三种类型数据
@@ -164,11 +165,8 @@ private:
 	//用于查找某key值所处的叶结点位置
     void findToLeaf(Tree pNode, T key, searchNodeParse &snp);
     //获取文件大小
-    int getFileSize(std::string file_path);
-
-private:
-	//用于对buffer_manager模块的操作
-	BufferManager buffer;
+    void getFile(std::string file_path);
+    int getBlockNum(std::string table_name);
 };
 
 template <class T>
@@ -1029,17 +1027,27 @@ void BPlusTree<T>::searchRange(T& key1, T& key2, std::vector<int>& vals, int fla
 
 //获取文件大小
 template <class T>
-int BPlusTree<T>::getFileSize(std::string fname) {
+void BPlusTree<T>::getFile(std::string fname) {
     FILE* f = fopen(fname.c_str() , "r");
     if (f == NULL) {
         f = fopen(fname.c_str(), "w+");
         fclose(f);
         f = fopen(fname.c_str() , "r");
     }
-    fseek(f , 0 , SEEK_END);
-    int size = (int)ftell(f);
     fclose(f);
-    return size;
+    return;
+}
+
+template <class T>
+int BPlusTree<T>::getBlockNum(std::string table_name)
+{
+    char* p;
+    int block_num = -1;
+    do {
+        p = buffer_manager.getPage(table_name , block_num + 1);
+        block_num++;
+    } while(p[0] != '\0');
+    return block_num;
 }
 
 template <class T>
@@ -1047,14 +1055,15 @@ void BPlusTree<T>::readFromDiskAll()
 {
     std::string fname = "./database/index/" + file_name;
     //std::string fname = file_name;
-    int block_num = getFileSize(fname) / PAGESIZE;
+    getFile(fname);
+    int block_num = getBlockNum(fname);
 
 	if (block_num <= 0)
         block_num = 1;
 
 	for (int i = 0; i < block_num; i++) {
         //获取当前块的句柄
-        char* p = buffer.getPage(fname, i);
+        char* p = buffer_manager.getPage(fname, i);
         //char* t = p;
         //遍历块中所有记录
 
@@ -1090,7 +1099,8 @@ void BPlusTree<T>::writtenbackToDiskAll()
 {
     std::string fname = "./database/index/" + file_name;
     //std::string fname = file_name;
-	int block_num = getFileSize(fname) / PAGESIZE;
+    getFile(fname);
+	int block_num = getBlockNum(fname);
 
 	//if (block_num <= 0)
     //    block_num = 1;
@@ -1103,7 +1113,7 @@ void BPlusTree<T>::writtenbackToDiskAll()
     for (j = 0, i = 0; ntmp != NULL; j++) {
         //bm.set_usingSize(*btmp, 0);
         //bm.set_dirty(*btmp);
-		char* p = buffer.getPage(fname, j);
+		char* p = buffer_manager.getPage(fname, j);
 
 		memset(p, 0, PAGESIZE);
 
@@ -1119,19 +1129,19 @@ void BPlusTree<T>::writtenbackToDiskAll()
 		}
         
         memset(t, '\n', sizeof(char));
-		int page_id = buffer.getPageId(fname, j);
-		buffer.flushPage(page_id , fname , j);
+		int page_id = buffer_manager.getPageId(fname, j);
+		buffer_manager.modifyPage(page_id);
         
         if (i >= ntmp->num)
             ntmp = ntmp->nextLeafNode;
     }
 
     while (j < block_num) {
-		char* p = buffer.getPage(fname, j);
+		char* p = buffer_manager.getPage(fname, j);
 		memset(p, 0, PAGESIZE);
 
-		int page_id = buffer.getPageId(fname, j);
-		buffer.flushPage(page_id , fname , j);
+		int page_id = buffer_manager.getPageId(fname, j);
+		buffer_manager.modifyPage(page_id);
 
         j++;
     }
