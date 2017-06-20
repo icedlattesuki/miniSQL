@@ -828,7 +828,7 @@ int Interpreter::getBits(int num){
 //根据除法得到小数的数字的长度
 int Interpreter::getBits(float num){
     int bit=0;
-    if(num==0)
+    if((int)num==0)
         return 4;
     if(num<0){
         bit++;
