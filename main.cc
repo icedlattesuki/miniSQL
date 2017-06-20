@@ -8,6 +8,9 @@
 
 #include <iostream>
 #include "interpreter.h"
+#include "buffer_manager.h"
+
+BufferManager buffer_manager;
 
 int main(int argc, const char * argv[]) {
     std::cout<<">>> Welcome to MiniSQL"<<std::endl;
