@@ -22,6 +22,8 @@
 #define TABLE_MANAGER_PATH "./database/catalog/catalog_file"
 #endif
 
+extern BufferManager buffer_manager;
+
 class CatalogManager{
 public:
     //输入：表名，属性对象，主键编号，索引对象
@@ -82,8 +84,8 @@ private:
     int getTablePlace(std::string name,int &suitable_block);
     //返回该表的index
     Index getIndex(std::string table_name);
-    //计算文件大小
-    int getFileSize(std::string table_name);
+    //获取文件大小
+    int getBlockNum(std::string table_name);
 };
 
 #endif /* catalog_hpp */

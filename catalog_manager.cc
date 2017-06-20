@@ -37,13 +37,12 @@ void CatalogManager::createTable(std::string name, Attribute Attr, int primary, 
     std::string str_len=num2str((int)str_tmp.length()-1, 4);
     str_tmp=str_len+str_tmp.substr(4,str_tmp.length()-4);
     //计算块的数量
-    int block_num=getFileSize(TABLE_MANAGER_PATH)/PAGESIZE;
+    int block_num=getBlockNum(TABLE_MANAGER_PATH)/PAGESIZE;
     //处理当块的数量为0的特殊情况
     if(block_num<=0)
         block_num=1;
     //遍历所有的块
     for(int current_block=0;current_block<block_num;current_block++){
-        BufferManager buffer_manager;
         char* buffer = buffer_manager.getPage(TABLE_MANAGER_PATH , current_block);
         int page_id = buffer_manager.getPageId(TABLE_MANAGER_PATH , current_block);
         //寻找该block的有效长度
@@ -60,17 +59,14 @@ void CatalogManager::createTable(std::string name, Attribute Attr, int primary, 
             strcat(buffer , str_tmp.c_str());
             //保存并刷新该页后返回
             buffer_manager.modifyPage(page_id);
-            buffer_manager.flushPage(page_id , TABLE_MANAGER_PATH , current_block);
             return;
         }
     }
     //如果之前的块不够用，就新建一块后直接把信息插入
-    BufferManager buffer_manager;
     char* buffer = buffer_manager.getPage(TABLE_MANAGER_PATH , block_num);
     int page_id = buffer_manager.getPageId(TABLE_MANAGER_PATH , block_num);
     strcat(buffer , str_tmp.c_str());
     buffer_manager.modifyPage(page_id);
-    buffer_manager.flushPage(page_id , TABLE_MANAGER_PATH , block_num);
     
 }
 
@@ -83,7 +79,6 @@ void CatalogManager::dropTable(std::string name){
     int suitable_block;
     int start_index=getTablePlace(name,suitable_block);
     //得到所对应块的信息
-    BufferManager buffer_manager;
     char* buffer = buffer_manager.getPage(TABLE_MANAGER_PATH , suitable_block);
     int page_id = buffer_manager.getPageId(TABLE_MANAGER_PATH , suitable_block);
     std::string buffer_check(buffer);
@@ -99,7 +94,6 @@ void CatalogManager::dropTable(std::string name){
     buffer[current_index]='\0';
     //刷新页面
     buffer_manager.modifyPage(page_id);
-    buffer_manager.flushPage(page_id , TABLE_MANAGER_PATH , suitable_block);
 }
 
 Attribute CatalogManager::getAttribute(std::string name){
@@ -111,7 +105,6 @@ Attribute CatalogManager::getAttribute(std::string name){
     int suitable_block;
     int start_index=getTablePlace(name,suitable_block);
     //得到所对应的块的信息
-    BufferManager buffer_manager;
     char* buffer = buffer_manager.getPage(TABLE_MANAGER_PATH , suitable_block);
     std::string buffer_check(buffer);
     //end_index记录该行中表的名字的最后一个字符的位置
@@ -343,9 +336,8 @@ void CatalogManager::showTable(std::string table_name){
 
 //判断是否已有重名的表格
 bool CatalogManager::hasTable(std::string table_name){
-    BufferManager buffer_manager;
     //计算块的数量
-    int block_num=getFileSize(TABLE_MANAGER_PATH)/PAGESIZE;
+    int block_num=getBlockNum(TABLE_MANAGER_PATH)/PAGESIZE;
     if(block_num<=0)
         block_num=1;
     //遍历所有的块
@@ -410,8 +402,7 @@ std::string CatalogManager::getTableName(std::string buffer,int start,int &rear)
 
 //得到该表的位置，引用传出该表的所在的块的位置，返回在块中的位置，如果未找到，则返回-1
 int CatalogManager::getTablePlace(std::string name,int &suitable_block){
-    BufferManager buffer_manager;
-    int block_num=getFileSize(TABLE_MANAGER_PATH);
+    int block_num=getBlockNum(TABLE_MANAGER_PATH);
     if(block_num<=0)
         block_num=1;
     //遍历所有的块
@@ -443,7 +434,6 @@ Index CatalogManager::getIndex(std::string table_name){
     //得到该表的位置和对应的块
     int suitable_block;
     int start_index=getTablePlace(table_name,suitable_block);
-    BufferManager buffer_manager;
     char* buffer = buffer_manager.getPage(TABLE_MANAGER_PATH , suitable_block);
     //将start_index对齐索引信息的位置
     std::string buffer_check(buffer);
@@ -465,12 +455,13 @@ Index CatalogManager::getIndex(std::string table_name){
     return index_record;
 }
 
-//返回文件的大小
-int CatalogManager::getFileSize(std::string table_name) {
-    FILE* f = fopen(table_name.c_str() , "r");
-    fseek(f , 0 , SEEK_END);
-    int size = (int)ftell(f);
-    fclose(f);
-    return size;
+//获取文件大小
+int CatalogManager::getBlockNum(std::string table_name) {
+    char* p;
+    int block_num = -1;
+    do {
+        p = buffer_manager.getPage(table_name , block_num + 1);
+        block_num++;
+    } while(p[0] != '\0');
+    return block_num;
 }
-
