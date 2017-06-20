@@ -65,12 +65,12 @@ void RecordManager::insertRecord(std::string table_name , Tuple& tuple) {
     //异常检测完成
 
     //获取表所占的块的数量
-    int block_num = getFileSize(table_name) / PAGESIZE;
+    // int block_num = getFileSize(table_name) / PAGESIZE;
+    // 改为
+    int block_num = getBlockNum(table_name);
     //处理表文件大小为0的特殊情况
     if (block_num <= 0)
         block_num = 1;
-    //初始化BufferManager
-    BufferManager buffer_manager;
     //获取表的最后一块的句柄
     char* p = buffer_manager.getPage(table_name , block_num - 1);
     int i;
@@ -104,7 +104,9 @@ void RecordManager::insertRecord(std::string table_name , Tuple& tuple) {
         insertRecord1(p , i , len , v);
         //写回表文件
         int page_id = buffer_manager.getPageId(table_name , block_num - 1);
-        buffer_manager.flushPage(page_id , table_name , block_num - 1);
+        // buffer_manager.flushPage(page_id , table_name , block_num - 1);
+        // 改为
+        buffer_manager.modifyPage(page_id);
     }
     //如果剩余的空间不够
     else {
@@ -115,7 +117,9 @@ void RecordManager::insertRecord(std::string table_name , Tuple& tuple) {
         insertRecord1(p , 0 , len , v);
         //写回表文件
         int page_id = buffer_manager.getPageId(table_name , block_num);
-        buffer_manager.flushPage(page_id , table_name , block_num);
+        // buffer_manager.flushPage(page_id , table_name , block_num);
+        // 改为
+        buffer_manager.modifyPage(page_id);
     }
 
     //更新索引
@@ -143,12 +147,12 @@ int RecordManager::deleteRecord(std::string table_name) {
         throw table_not_exist();
     }
     //获取文件所占块的数量
-    int block_num = getFileSize(table_name) / PAGESIZE;
+    // int block_num = getFileSize(table_name) / PAGESIZE;
+    // 改为
+    int block_num = getBlockNum(table_name);
     //表文件大小为0时直接返回
     if (block_num <= 0)
         return 0;
-    //初始化BufferManager
-    BufferManager buffer_manager;
     Attribute attr = catalog_manager.getAttribute(tmp_name);
     IndexManager index_manager(tmp_name);
     int count = 0;
@@ -175,7 +179,9 @@ int RecordManager::deleteRecord(std::string table_name) {
         }
         //将块写回表文件
         int page_id = buffer_manager.getPageId(table_name , i);
-        buffer_manager.flushPage(page_id , table_name , i);
+        // buffer_manager.flushPage(page_id , table_name , i);
+        // 改为
+        buffer_manager.modifyPage(page_id);
     }
     return count;
 }
@@ -228,7 +234,9 @@ int RecordManager::deleteRecord(std::string table_name , std::string target_attr
     }
     else {
         //获取文件所占块的数量
-        int block_num = getFileSize(table_name) / PAGESIZE;
+        // int block_num = getFileSize(table_name) / PAGESIZE;
+        // 改为
+        int block_num = getBlockNum(table_name);
         //文件大小为0，直接返回
         if (block_num <= 0)
             return 0;
@@ -253,7 +261,9 @@ Table RecordManager::selectRecord(std::string table_name , std::string result_ta
         throw table_not_exist();
     }
     //获取文件所占的块的数量
-    int block_num = getFileSize(table_name) / PAGESIZE;
+    // int block_num = getFileSize(table_name) / PAGESIZE;
+    // 改为
+    int block_num = getBlockNum(table_name);
     //处理文件大小为0的特殊情况
     if (block_num <= 0)
         block_num = 1;
@@ -262,7 +272,6 @@ Table RecordManager::selectRecord(std::string table_name , std::string result_ta
     //构建table类的实例
     Table table(result_table_name , attr);
     std::vector<Tuple>& v = table.getTuple();
-    BufferManager buffer_manager;
     //遍历所有块
     for (int i = 0;i < block_num;i++) {
         //获取当前块的句柄
@@ -331,7 +340,9 @@ Table RecordManager::selectRecord(std::string table_name , std::string target_at
     }
     else {
         //获取文件所占的块的数量
-        int block_num = getFileSize(table_name) / PAGESIZE;
+        // int block_num = getFileSize(table_name) / PAGESIZE;
+        // 改为
+        int block_num = getBlockNum(table_name);
         //处理文件大小为0的特殊情况
         if (block_num <= 0)
             block_num = 1;
@@ -371,12 +382,13 @@ void RecordManager::createIndex(IndexManager& index_manager , std::string table_
     //异常检测完成
 
     //获取文件所占的块的数量
-    int block_num = getFileSize(table_name) / PAGESIZE;
+    // int block_num = getFileSize(table_name) / PAGESIZE;
+    // 改为
+    int block_num = getBlockNum(table_name);
     //处理文件大小为0的特殊情况
     if (block_num <= 0)
         block_num = 1;
     //获取表的属性
-    BufferManager buffer_manager;
     std::string file_path = "INDEX_FILE_" + target_attr + "_" + tmp_name;
     //遍历所有块
     for (int i = 0;i < block_num;i++) {
@@ -399,12 +411,14 @@ void RecordManager::createIndex(IndexManager& index_manager , std::string table_
 //以下是几个辅助函数，不详细注释了
 
 //获取文件大小
-int RecordManager::getFileSize(std::string table_name) {
-    FILE* f = fopen(table_name.c_str() , "r");
-    fseek(f , 0 , SEEK_END);
-    int size = ftell(f);
-    fclose(f);
-    return size;
+int RecordManager::getBlockNum(std::string table_name) {
+    char* p;
+    int block_num = -1;
+    do {
+        p = buffer_manager.getPage(table_name , block_num + 1);
+        block_num++;
+    } while(p[0] != '\0');
+    return block_num;
 }
 
 //insertRecord的辅助函数
@@ -557,7 +571,6 @@ void RecordManager::searchWithIndex(std::string table_name , std::string target_
 
 //在块中进行条件删除
 int RecordManager::conditionDeleteInBlock(std::string table_name , int block_id , Attribute attr , int index , Where where) {
-    BufferManager buffer_manager;
     //获取当前块的句柄
     table_name = "./database/data/" + table_name;//新增
     char* p = buffer_manager.getPage(table_name , block_id);
@@ -609,13 +622,14 @@ int RecordManager::conditionDeleteInBlock(std::string table_name , int block_id 
     }
     //将当前块写回文件
     int page_id = buffer_manager.getPageId(table_name , block_id);
-    buffer_manager.flushPage(page_id , table_name , block_id);
+    // buffer_manager.flushPage(page_id , table_name , block_id);
+    // 改为
+    buffer_manager.modifyPage(page_id);
     return count;
 }
 
 //在块中进行条件查询
 void RecordManager::conditionSelectInBlock(std::string table_name , int block_id , Attribute attr , int index , Where where , std::vector<Tuple>& v) {
-    BufferManager buffer_manager;
     //获取当前块的句柄
     table_name = "./database/data/" + table_name;//新增
     char* p = buffer_manager.getPage(table_name , block_id);

@@ -22,6 +22,8 @@
 #include "const.h"
 #include "template_function.h"
 
+extern BufferManager buffer_manager;
+
 class RecordManager {
     public:
         //输入：表名
@@ -70,7 +72,7 @@ class RecordManager {
         void createIndex(IndexManager& index_manager , std::string table_name , std::string target_attr);
     private:
         //获取文件大小
-        int getFileSize(std::string table_name);
+        int getBlockNum(std::string table_name);
         //insertRecord的辅助函数
         void insertRecord1(char* p , int offset , int len , const std::vector<Data>& v);
         //deleteRecord的辅助函数
