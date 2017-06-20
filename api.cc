@@ -36,9 +36,9 @@ Table API::selectRecord(std::string table_name, std::vector<std::string> target_
 		Table table2 = record.selectRecord(table_name, target_attr[1], where[1]);
 
 		if (operation)
-			return joinTable(table1, table2);
+			return joinTable(table1, table2, target_attr[0], where[0]);
 		else
-			return unionTable(table1, table2);
+			return unionTable(table1, table2, target_attr[0], where[0]);
 	}
 }
 //输入：表名、Where条件属性名、Where条件值域
@@ -152,37 +152,102 @@ bool API::dropIndex(std::string table_name, std::string index_name)
 }
 
 //私有函数，用于多条件查询时的or条件合并
-Table API::unionTable(Table &table1, Table &table2)
+Table API::unionTable(Table &table1, Table &table2, std::string target_attr, Where where)
 {
 	Table result_table(table1);
     std::vector<Tuple>& result_tuple = result_table.getTuple();
 	std::vector<Tuple> tuple1 = table1.getTuple();
 	std::vector<Tuple> tuple2 = table2.getTuple();
+    result_tuple = tuple1;
 
-	std::vector<Tuple>().swap(result_tuple);
-	std::sort(tuple1.begin(), tuple1.end(), sortcmp);
-	std::sort(tuple2.begin(), tuple2.end(), sortcmp);
+	//std::vector<Tuple>().swap(result_tuple);
 
-	std::set_union(tuple1.begin(), tuple1.end(), tuple2.begin(), tuple2.end(), std::back_inserter(result_tuple), calcmp);
-
-	return result_table;
+    int i;
+    Attribute attr = table1.getAttr();
+    for (i = 0; i < 32; i++)
+        if (attr.name[i] == target_attr)
+            break;
+    
+    for (int j = 0; j < tuple2.size(); j++)
+        if (!isSatisfied(tuple2[j], i, where))
+            result_tuple.push_back(tuple2[j]);
+    
+    std::sort(result_tuple.begin(), result_tuple.end(), sortcmp);
+    return result_table;
+	//std::merge(tuple1.begin(), tuple1.end(), tuple2.begin(), tuple2.end(), std::back_inserter(result_tuple), sortcmp);
+    //result_tuple.erase(unique(result_tuple.begin(), result_tuple.end(), calcmp), result_tuple.end());
+    
+//    int i;
+//    for (i = 0; i < tuple1.size() && i < tuple2.size(); i++) {
+//        std::vector<Data> data1 = tuple1[i].getData();
+//        std::vector<Data> data2 = tuple2[i].getData();
+//        
+//        int j;
+//        for (j = 0; j < data1.size(); j++) {
+//            int flag = 0;
+//
+//            switch (data1[i].type) {
+//                case -1: {
+//                    if (data1[i].datai != data2[i].datai) {
+//                        if (data1[i].datai < data2[i].datai)
+//                            flag = 1;
+//                        else
+//                            flag = -1;
+//                    }
+//                } break;
+//                case 0: {
+//                    if (data1[i].dataf != data2[i].dataf) {
+//                        if (data1[i].dataf < data2[i].dataf)
+//                            flag = 1;
+//                        else
+//                            flag = -1;
+//                    }
+//                } break;
+//                default: {
+//                    if (data1[i].datas < data2[i].datas)
+//                        flag = 1;
+//                    else
+//                        flag = -1;
+//                } break;
+//            }
+//            
+//            if (flag)
+//                break;
+//        }
+//        
+//        switch (flag) {
+//            case 1:
+//        }
+//    }
 }
 
 //私有函数，用于多条件查询时的and条件合并
-Table API::joinTable(Table &table1, Table &table2)
+Table API::joinTable(Table &table1, Table &table2, std::string target_attr, Where where)
 {
 	Table result_table(table1);
-    std::vector<Tuple> result_tuple = result_table.getTuple();
+    std::vector<Tuple>& result_tuple = result_table.getTuple();
 	std::vector<Tuple> tuple1 = table1.getTuple();
 	std::vector<Tuple> tuple2 = table2.getTuple();
+    
+    int i;
+    Attribute attr = table1.getAttr();
+    for (i = 0; i < 32; i++)
+        if (attr.name[i] == target_attr)
+            break;
+    
+    for (int j = 0; j < tuple2.size(); j++)
+        if (isSatisfied(tuple2[j], i, where))
+            result_tuple.push_back(tuple2[j]);
+    
+    std::sort(result_tuple.begin(), result_tuple.end(), sortcmp);
+    return result_table;
+//	std::vector<Tuple>().swap(result_tuple);
+//	std::sort(tuple1.begin(), tuple1.end(), sortcmp);
+//	std::sort(tuple2.begin(), tuple2.end(), sortcmp);
 
-	std::vector<Tuple>().swap(result_tuple);
-	std::sort(tuple1.begin(), tuple1.end(), sortcmp);
-	std::sort(tuple2.begin(), tuple2.end(), sortcmp);
+    //std::set_intersection(tuple1.begin(), tuple1.end(), tuple2.begin(), tuple2.end(), std::back_inserter(result_tuple), calcmp);
 
-    std::set_intersection(tuple1.begin(), tuple1.end(), tuple2.begin(), tuple2.end(), std::back_inserter(result_tuple), calcmp);
-
-	return result_table;
+	//return result_table;
 }
 
 //用于对vector的sort时排序
@@ -228,7 +293,60 @@ bool calcmp(const Tuple &tuple1, const Tuple &tuple2)
 
 
 	if (i == data1.size())
-		return false;
-	else
 		return true;
+	else
+		return false;
+}
+
+bool isSatisfied(Tuple& tuple, int target_attr, Where where)
+{
+    std::vector<Data> data = tuple.getData();
+    
+    switch (where.relation_character) {
+        case LESS : {
+            switch (where.data.type) {
+                case -1 : return (data[target_attr].datai < where.data.datai); break;
+                case 0 : return (data[target_attr].dataf < where.data.dataf); break;
+                default: return (data[target_attr].datas < where.data.datas); break;
+            }
+        } break;
+        case LESS_OR_EQUAL : {
+            switch (where.data.type) {
+                case -1 : return (data[target_attr].datai <= where.data.datai); break;
+                case 0 : return (data[target_attr].dataf <= where.data.dataf); break;
+                default: return (data[target_attr].datas <= where.data.datas); break;
+            }
+        } break;
+        case EQUAL : {
+            switch (where.data.type) {
+                case -1 : return (data[target_attr].datai == where.data.datai); break;
+                case 0 : return (data[target_attr].dataf == where.data.dataf); break;
+                default: return (data[target_attr].datas == where.data.datas); break;
+            }
+        } break;
+        case GREATER_OR_EQUAL : {
+            switch (where.data.type) {
+                case -1 : return (data[target_attr].datai >= where.data.datai); break;
+                case 0 : return (data[target_attr].dataf >= where.data.dataf); break;
+                default: return (data[target_attr].datas >= where.data.datas); break;
+            }
+        } break;
+        case GREATER : {
+            switch (where.data.type) {
+                case -1 : return (data[target_attr].datai > where.data.datai); break;
+                case 0 : return (data[target_attr].dataf > where.data.dataf); break;
+                default: return (data[target_attr].datas > where.data.datas); break;
+            }
+        } break;
+        case NOT_EQUAL : {
+            switch (where.data.type) {
+                case -1 : return (data[target_attr].datai != where.data.datai); break;
+                case 0 : return (data[target_attr].dataf != where.data.dataf); break;
+                default: return (data[target_attr].datas != where.data.datas); break;
+            }
+        } break;
+        default:break;
+    }
+            
+    return false;
 }
