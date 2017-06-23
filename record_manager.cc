@@ -49,7 +49,7 @@ void RecordManager::insertRecord(std::string table_name , Tuple& tuple) {
     }
     Table table = selectRecord(tmp_name);
     std::vector<Tuple>& tuples = table.getTuple();
-    检测是否存在主键冲突
+    //检测是否存在主键冲突
     if (attr.primary_key >= 0) {
         if (isConflict(tuples , v , attr.primary_key) == true) 
             throw primary_key_conflict();
