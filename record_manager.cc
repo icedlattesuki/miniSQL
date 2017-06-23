@@ -49,7 +49,7 @@ void RecordManager::insertRecord(std::string table_name , Tuple& tuple) {
     }
     Table table = selectRecord(tmp_name);
     std::vector<Tuple>& tuples = table.getTuple();
-    //检测是否存在主键冲突
+    检测是否存在主键冲突
     if (attr.primary_key >= 0) {
         if (isConflict(tuples , v , attr.primary_key) == true) 
             throw primary_key_conflict();
@@ -399,8 +399,10 @@ void RecordManager::createIndex(IndexManager& index_manager , std::string table_
         while (*p != '\0' && p < t + PAGESIZE) {
             //读取记录
             Tuple tuple = readTuple(p , attr);
-            std::vector<Data> v = tuple.getData();
-            index_manager.insertIndex(file_path , v[index] , i);
+            if (tuple.isDeleted() == false) {
+                std::vector<Data> v = tuple.getData();
+                index_manager.insertIndex(file_path , v[index] , i);
+            }
             int len = getTupleLength(p);
             p = p + len;
         }
