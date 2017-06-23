@@ -210,7 +210,7 @@ int IndexManager::getKeySize(int type)
     else if (type == TYPE_INT)
         return sizeof(int);
     else if (type > 0)
-        return type + 1;
+        return type;
     else {
         // cout << "ERROR: in getKeySize: invalid type" << endl;
         return -100;
@@ -221,13 +221,13 @@ void IndexManager::searchRange(std::string file_path, Data data1, Data data2, st
 {
     int flag = 0;
     //检测数据类型是否匹配
-    if (data1.type != data2.type) {
-        // cout << "ERROR: in searchRange: Wrong data type!" << endl;
-        return;
-    } else if (data1.type == -2) {
+    if (data1.type == -2) {
         flag = 1;
     } else if (data2.type == -2) {
         flag = 2;
+    } else if (data1.type != data2.type) {
+        // cout << "ERROR: in searchRange: Wrong data type!" << endl;
+        return;
     }
 
     if (data1.type == TYPE_INT) {
