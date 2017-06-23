@@ -1081,7 +1081,7 @@ void BPlusTree<T>::readFromDisk(char* start, char* end)
     T key;
     int value;
 
-    while(/*((*valueBegin != 0) || (valueBegin == start)) && */valueBegin < end)
+    while(*valueBegin != '\0' && valueBegin < end)
         //块中仍有空位
     {
         key = *(T*)indexBegin;
@@ -1132,8 +1132,10 @@ void BPlusTree<T>::writtenbackToDiskAll()
 		int page_id = buffer_manager.getPageId(fname, j);
 		buffer_manager.modifyPage(page_id);
         
-        if (i >= ntmp->num)
+        if (i >= ntmp->num) {
             ntmp = ntmp->nextLeafNode;
+            i = 0;
+        }
     }
 
     while (j < block_num) {
