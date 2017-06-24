@@ -297,7 +297,7 @@ void CatalogManager::showTable(std::string table_name){
                 type="float";
                 break;
             default:
-                type="char("+num2str(attr_record.type[index], 3)+")";
+                type="char("+num2str(attr_record.type[index]-1, 3)+")";
                 break;
         }
         std::cout<<index<<std::setw(3-index/10)<<"|"<<attr_record.name[index]<<std::setw(longest-(int)attr_record.name[index].length()+2)<<"|"<<type<<std::setw(10-(int)type.length())<<"|";
