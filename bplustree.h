@@ -13,10 +13,12 @@
 #include <string>
 #include <map>
 #include <iostream>
+#include <sstream>
 #include "basic.h"
 #include "const.h"
 #include "exception.h"
 #include "buffer_manager.h"
+#include "template_function.h"
 
 extern BufferManager buffer_manager;
 
@@ -151,7 +153,7 @@ public:
 	//将新数据写入磁盘
     void writtenbackToDiskAll();
 	//在磁盘中读取某一块的数据
-    void readFromDisk(char *start, char* end);
+    void readFromDisk(char *p, char* end);
     
     void printleaf();
 
@@ -990,10 +992,6 @@ void BPlusTree<T>::searchRange(T& key1, T& key2, std::vector<int>& vals, int fla
 		bool finished = false;
 		unsigned int index;
 
-	    // if (!snp1.ifFound || !snp2.ifFound) {
-		// 	// cout << "Can't find the keys!" << endl;
-	    //     return;
-		// } else {
 		if (key1 <= key2) {
 			Tree pNode = snp1.pNode;
 			index = snp1.index;
@@ -1073,24 +1071,38 @@ void BPlusTree<T>::readFromDiskAll()
 
 
 template <class T>
-void BPlusTree<T>::readFromDisk(char* start, char* end)
+void BPlusTree<T>::readFromDisk(char* p, char* end)
 {
-    int value_size = sizeof(int);
-    char* indexBegin = start;
-    char* valueBegin = indexBegin + key_size;
     T key;
     int value;
-
-    while(*valueBegin != '\0' && valueBegin < end)
-        //块中仍有空位
-    {
-        key = *(T*)indexBegin;
-        value = *(int*)valueBegin;
-        insertKey(key, value);
-        valueBegin += key_size + value_size;
-        indexBegin += key_size + value_size;
-    }
-
+    
+    for (int i = 0; i < PAGESIZE; i++)
+        if (p[i] != '#')
+            return;
+        else {
+            i += 2;
+            char tmp[100];
+            int j;
+            
+            for (j = 0; i < PAGESIZE && p[i] != ' '; i++)
+                tmp[j++] = p[i];
+            tmp[j] = '\0';
+            std::string s(tmp);
+            std::stringstream stream(s);
+            stream >> key;
+            
+            memset(tmp, 0, sizeof(tmp));
+            
+            i++;
+            for (j = 0; i < PAGESIZE && p[i] != ' '; i++)
+                tmp[j++] = p[i];
+            tmp[j] = '\0';
+            std::string s1(tmp);
+            std::stringstream stream1(s1);
+            stream1 >> value;
+            
+            insertKey(key, value);
+        }
 }
 
 
@@ -1102,40 +1114,31 @@ void BPlusTree<T>::writtenbackToDiskAll()
     getFile(fname);
 	int block_num = getBlockNum(fname);
 
-	//if (block_num <= 0)
-    //    block_num = 1;
-
-    //blockNode* btmp = bm.getBlockHead(file);
     Tree ntmp = leafHead;
-    int value_size = sizeof(int);
 	int i, j;
     
     for (j = 0, i = 0; ntmp != NULL; j++) {
-        //bm.set_usingSize(*btmp, 0);
-        //bm.set_dirty(*btmp);
 		char* p = buffer_manager.getPage(fname, j);
-
+        int offset = 0;
+        
 		memset(p, 0, PAGESIZE);
-
-		char *t = p;
-        for (; i < ntmp->num && t < p+PAGESIZE; i++) {
-            char* key = (char*)&(ntmp->keys[i]);
-            char* value = (char*)&(ntmp->vals[i]);
-
-            memcpy(t, key, key_size);
-            t += key_size;
-            memcpy(t, value, value_size);
-            t += value_size;
+        
+        for (i = 0; i < ntmp->num; i++) {
+            p[offset++] = '#';
+            p[offset++] = ' ';
+            
+            copyString(p, offset, ntmp->keys[i]);
+            p[offset++] = ' ';
+            copyString(p, offset, ntmp->vals[i]);
+            p[offset++] = ' ';
 		}
         
-        memset(t, '\n', sizeof(char));
+        p[offset] = '\0';
+
 		int page_id = buffer_manager.getPageId(fname, j);
 		buffer_manager.modifyPage(page_id);
         
-        if (i >= ntmp->num) {
-            ntmp = ntmp->nextLeafNode;
-            i = 0;
-        }
+        ntmp = ntmp->nextLeafNode;
     }
 
     while (j < block_num) {
