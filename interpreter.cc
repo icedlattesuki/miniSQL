@@ -162,6 +162,7 @@ void Interpreter::EXEC_CREATE_INDEX(){
     if(query[check_index+1]!=')'||query[check_index+3]!='\0')
         throw 1;//格式错误
     API.createIndex(table_name, index_name, attr_name);
+    std::cout<<">>> SUCCESS"<<std::endl;
 }
 
 void Interpreter::EXEC_DROP_INDEX(){
@@ -181,6 +182,7 @@ void Interpreter::EXEC_DROP_INDEX(){
     if(query[check_index+1]!='\0')
         throw 1;//输入错误
     API.dropIndex(table_name, index_name);
+    std::cout<<">>> SUCCESS"<<std::endl;
 }
 
 void Interpreter::EXEC_EXIT(){
@@ -674,8 +676,12 @@ void Interpreter::EXEC_CREATE_TABLE(){
     while(1){
         check_index+=3;
         //如果已经遍历完string了，就退出
-        if(query[check_index]=='\0')
-            break;
+        if(query[check_index]=='\0'){
+            if(query[check_index-2]=='\0')
+                throw 1;
+            else
+                break;
+        }
         //得到一个属性的名字
         attr_name=getWord(check_index, check_index);
         //检测这个属性是不是primary
