@@ -225,11 +225,14 @@ void IndexManager::searchRange(std::string file_path, Data data1, Data data2, st
         flag = 1;
     } else if (data2.type == -2) {
         flag = 2;
-    } else if (data1.type != data2.type) {
+    }
+    /*
+    else if (data1.type != data2.type) {
         // cout << "ERROR: in searchRange: Wrong data type!" << endl;
         return;
     }
-
+     */
+    
     if (data1.type == TYPE_INT) {
         intMap::iterator itInt = indexIntMap.find(file_path);
         if (itInt == indexIntMap.end()) {
