@@ -1,3 +1,10 @@
+create table test(
+    id char(10),
+    name char(3),
+    age int,
+    gpa float,
+    primary key(id)
+);
 insert into test values('3150100001','ckx',24,2.4);
 insert into test values('3150100002','xht',19,2);
 insert into test values('3150100003','wsn',18,4);
