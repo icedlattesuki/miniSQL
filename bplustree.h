@@ -9,6 +9,8 @@
 #ifndef _BPLUSTREE_H_
 #define _BPLUSTREE_H_ 1
 
+#include <string.h>
+#include <algorithm>
 #include <vector>
 #include <string>
 #include <map>

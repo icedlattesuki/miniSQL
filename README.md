@@ -7,6 +7,9 @@
 #### 1、编译
 
 - Linux、Mac以及unix平台下，直接使用提供的makefile编译即可
+```
+make
+```
 - windows平台请通过VS自行搭建工程并编译运行，各文件之间的依赖关系请参照makefile
 
 #### 2、使用
